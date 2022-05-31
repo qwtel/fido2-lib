@@ -2,7 +2,6 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-var url = require('url');
 var tldts = require('tldts');
 var punycode = require('punycode');
 var jose = require('jose');
@@ -1320,7 +1319,7 @@ function derToRaw(signature) {
 }
 
 function checkOrigin(str) {
-	const originUrl = new url.URL(str);
+	const originUrl = new URL(str);
 	const origin = originUrl.origin;
 
 	if (origin !== str) {
@@ -1355,7 +1354,7 @@ function checkUrl(value, name, rules = {}) {
 
 	let urlValue = null;
 	try {
-		urlValue = new url.URL(value);
+		urlValue = new URL(value);
 	} catch (_err) {
 		throw new Error(`${name} is not a valid eTLD+1/url`);
 	}
@@ -1542,7 +1541,7 @@ function randomValues(n) {
 }
 
 function getHostname(urlIn) {
-	return new url.URL(urlIn).hostname;
+	return new URL(urlIn).hostname;
 }
 
 async function getEmbeddedJwk(jwsHeader, alg) {
