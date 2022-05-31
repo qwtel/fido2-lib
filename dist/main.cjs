@@ -1085,7 +1085,7 @@ class PublicKey {
 		if (this._original_pem && !forcedExport) {
 			return this._original_pem;
 		} else if (this.getKey()) {
-			const pemResult = abToPem("PUBLIC KEY",await webcrypto.subtle.exportKey("spki", this.getKey()));
+			let pemResult = abToPem("PUBLIC KEY",await webcrypto.subtle.exportKey("spki", this.getKey()));
 			
 			// Add trailing \n if missing (Deno only)
 			if (pemResult[pemResult.length - 1] !== "\n") {

@@ -581,12 +581,13 @@ const MIN_BUF_SIZE = 16;
 const CR = "\r".charCodeAt(0);
 const LF = "\n".charCodeAt(0);
 class BufferFullError extends Error {
-    partial;
-    name = "BufferFullError";
+    name;
     constructor(partial){
         super("Buffer full");
         this.partial = partial;
+        this.name = "BufferFullError";
     }
+    partial;
 }
 class PartialReadError extends Error {
     name = "PartialReadError";
@@ -1000,7 +1001,7 @@ function isArrayIndex(value) {
                 let i8 = 0;
                 for(; i8 < length; ++i8){
                     ch = value.charCodeAt(i8);
-                    if (i8 === 0 && ch === 48 && length > 1 || ch < 48 || ch > 57) {
+                    if (i8 === 0 && ch === 0x30 && length > 1 || ch < 0x30 || ch > 0x39) {
                         return isNumericLookup[value] = false;
                     }
                 }
@@ -2625,10 +2626,10 @@ function getStringWidth(str, removeControlChars = true) {
     return width;
 }
 const isFullWidthCodePoint = (code)=>{
-    return code >= 4352 && (code <= 4447 || code === 9001 || code === 9002 || code >= 11904 && code <= 12871 && code !== 12351 || code >= 12880 && code <= 19903 || code >= 19968 && code <= 42182 || code >= 43360 && code <= 43388 || code >= 44032 && code <= 55203 || code >= 63744 && code <= 64255 || code >= 65040 && code <= 65049 || code >= 65072 && code <= 65131 || code >= 65281 && code <= 65376 || code >= 65504 && code <= 65510 || code >= 110592 && code <= 110593 || code >= 127488 && code <= 127569 || code >= 127744 && code <= 128591 || code >= 131072 && code <= 262141);
+    return code >= 0x1100 && (code <= 0x115f || code === 0x2329 || code === 0x232a || code >= 0x2e80 && code <= 0x3247 && code !== 0x303f || code >= 0x3250 && code <= 0x4dbf || code >= 0x4e00 && code <= 0xa4c6 || code >= 0xa960 && code <= 0xa97c || code >= 0xac00 && code <= 0xd7a3 || code >= 0xf900 && code <= 0xfaff || code >= 0xfe10 && code <= 0xfe19 || code >= 0xfe30 && code <= 0xfe6b || code >= 0xff01 && code <= 0xff60 || code >= 0xffe0 && code <= 0xffe6 || code >= 0x1b000 && code <= 0x1b001 || code >= 0x1f200 && code <= 0x1f251 || code >= 0x1f300 && code <= 0x1f64f || code >= 0x20000 && code <= 0x3fffd);
 };
 const isZeroWidthCodePoint = (code)=>{
-    return code <= 31 || code >= 127 && code <= 159 || code >= 768 && code <= 879 || code >= 8203 && code <= 8207 || code >= 8400 && code <= 8447 || code >= 65024 && code <= 65039 || code >= 65056 && code <= 65071 || code >= 917760 && code <= 917999;
+    return code <= 0x1F || code >= 0x7F && code <= 0x9F || code >= 0x300 && code <= 0x36F || code >= 0x200B && code <= 0x200F || code >= 0x20D0 && code <= 0x20FF || code >= 0xFE00 && code <= 0xFE0F || code >= 0xFE20 && code <= 0xFE2F || code >= 0xE0100 && code <= 0xE01EF;
 };
 function stripVTControlCharacters(str) {
     validateString(str, "str");
@@ -4664,19 +4665,19 @@ function encode(data) {
     const l = uint8.length;
     for(i23 = 2; i23 < l; i23 += 3){
         result += base64abc[uint8[i23 - 2] >> 2];
-        result += base64abc[(uint8[i23 - 2] & 3) << 4 | uint8[i23 - 1] >> 4];
-        result += base64abc[(uint8[i23 - 1] & 15) << 2 | uint8[i23] >> 6];
-        result += base64abc[uint8[i23] & 63];
+        result += base64abc[(uint8[i23 - 2] & 0x03) << 4 | uint8[i23 - 1] >> 4];
+        result += base64abc[(uint8[i23 - 1] & 0x0f) << 2 | uint8[i23] >> 6];
+        result += base64abc[uint8[i23] & 0x3f];
     }
     if (i23 === l + 1) {
         result += base64abc[uint8[i23 - 2] >> 2];
-        result += base64abc[(uint8[i23 - 2] & 3) << 4];
+        result += base64abc[(uint8[i23 - 2] & 0x03) << 4];
         result += "==";
     }
     if (i23 === l) {
         result += base64abc[uint8[i23 - 2] >> 2];
-        result += base64abc[(uint8[i23 - 2] & 3) << 4 | uint8[i23 - 1] >> 4];
-        result += base64abc[(uint8[i23 - 1] & 15) << 2];
+        result += base64abc[(uint8[i23 - 2] & 0x03) << 4 | uint8[i23 - 1] >> 4];
+        result += base64abc[(uint8[i23 - 1] & 0x0f) << 2];
         result += "=";
     }
     return result;
@@ -4977,7 +4978,7 @@ function readInt24LE(buf, offset = 0) {
         boundsError(offset, buf.length - 3);
     }
     const val = first + buf[++offset] * 2 ** 8 + last * 2 ** 16;
-    return val | (val & 2 ** 23) * 510;
+    return val | (val & 2 ** 23) * 0x1fe;
 }
 function readInt40LE(buf, offset = 0) {
     validateNumber(offset, "offset");
@@ -4986,7 +4987,7 @@ function readInt40LE(buf, offset = 0) {
     if (first === undefined || last === undefined) {
         boundsError(offset, buf.length - 5);
     }
-    return (last | (last & 2 ** 7) * 33554430) * 2 ** 32 + first + buf[++offset] * 2 ** 8 + buf[++offset] * 2 ** 16 + buf[++offset] * 2 ** 24;
+    return (last | (last & 2 ** 7) * 0x1fffffe) * 2 ** 32 + first + buf[++offset] * 2 ** 8 + buf[++offset] * 2 ** 16 + buf[++offset] * 2 ** 24;
 }
 function readInt48LE(buf, offset = 0) {
     validateNumber(offset, "offset");
@@ -4996,7 +4997,7 @@ function readInt48LE(buf, offset = 0) {
         boundsError(offset, buf.length - 6);
     }
     const val = buf[offset + 4] + last * 2 ** 8;
-    return (val | (val & 2 ** 15) * 131070) * 2 ** 32 + first + buf[++offset] * 2 ** 8 + buf[++offset] * 2 ** 16 + buf[++offset] * 2 ** 24;
+    return (val | (val & 2 ** 15) * 0x1fffe) * 2 ** 32 + first + buf[++offset] * 2 ** 8 + buf[++offset] * 2 ** 16 + buf[++offset] * 2 ** 24;
 }
 function readInt24BE(buf, offset = 0) {
     validateNumber(offset, "offset");
@@ -5006,7 +5007,7 @@ function readInt24BE(buf, offset = 0) {
         boundsError(offset, buf.length - 3);
     }
     const val = first * 2 ** 16 + buf[++offset] * 2 ** 8 + last;
-    return val | (val & 2 ** 23) * 510;
+    return val | (val & 2 ** 23) * 0x1fe;
 }
 function readInt48BE(buf, offset = 0) {
     validateNumber(offset, "offset");
@@ -5016,7 +5017,7 @@ function readInt48BE(buf, offset = 0) {
         boundsError(offset, buf.length - 6);
     }
     const val = buf[++offset] + first * 2 ** 8;
-    return (val | (val & 2 ** 15) * 131070) * 2 ** 32 + buf[++offset] * 2 ** 24 + buf[++offset] * 2 ** 16 + buf[++offset] * 2 ** 8 + last;
+    return (val | (val & 2 ** 15) * 0x1fffe) * 2 ** 32 + buf[++offset] * 2 ** 24 + buf[++offset] * 2 ** 16 + buf[++offset] * 2 ** 8 + last;
 }
 function readInt40BE(buf, offset = 0) {
     validateNumber(offset, "offset");
@@ -5025,16 +5026,16 @@ function readInt40BE(buf, offset = 0) {
     if (first === undefined || last === undefined) {
         boundsError(offset, buf.length - 5);
     }
-    return (first | (first & 2 ** 7) * 33554430) * 2 ** 32 + buf[++offset] * 2 ** 24 + buf[++offset] * 2 ** 16 + buf[++offset] * 2 ** 8 + last;
+    return (first | (first & 2 ** 7) * 0x1fffffe) * 2 ** 32 + buf[++offset] * 2 ** 24 + buf[++offset] * 2 ** 16 + buf[++offset] * 2 ** 8 + last;
 }
 function byteLengthUtf8(str) {
     return utf8Encoder.encode(str).length;
 }
 function base64ByteLength(str, bytes) {
-    if (str.charCodeAt(bytes - 1) === 61) {
+    if (str.charCodeAt(bytes - 1) === 0x3D) {
         bytes--;
     }
-    if (bytes > 1 && str.charCodeAt(bytes - 1) === 61) {
+    if (bytes > 1 && str.charCodeAt(bytes - 1) === 0x3D) {
         bytes--;
     }
     return bytes * 3 >>> 2;
@@ -5809,10 +5810,10 @@ function bidirectionalIndexOf(buffer, val, byteOffset, encoding, dir) {
     if (typeof byteOffset === "string") {
         encoding = byteOffset;
         byteOffset = undefined;
-    } else if (byteOffset > 2147483647) {
-        byteOffset = 2147483647;
-    } else if (byteOffset < -2147483648) {
-        byteOffset = -2147483648;
+    } else if (byteOffset > 0x7fffffff) {
+        byteOffset = 0x7fffffff;
+    } else if (byteOffset < -0x80000000) {
+        byteOffset = -0x80000000;
     }
     byteOffset = +byteOffset;
     if (Number.isNaN(byteOffset)) {
@@ -6255,7 +6256,7 @@ Buffer1.prototype.readInt8 = function readInt8(offset = 0) {
     if (val === undefined) {
         boundsError(offset, this.length - 1);
     }
-    return val | (val & 2 ** 7) * 33554430;
+    return val | (val & 2 ** 7) * 0x1fffffe;
 };
 Buffer1.prototype.readInt16LE = function readInt16LE(offset = 0) {
     validateNumber(offset, "offset");
@@ -6265,7 +6266,7 @@ Buffer1.prototype.readInt16LE = function readInt16LE(offset = 0) {
         boundsError(offset, this.length - 2);
     }
     const val = first + last * 2 ** 8;
-    return val | (val & 2 ** 15) * 131070;
+    return val | (val & 2 ** 15) * 0x1fffe;
 };
 Buffer1.prototype.readInt16BE = function readInt16BE(offset = 0) {
     validateNumber(offset, "offset");
@@ -6275,7 +6276,7 @@ Buffer1.prototype.readInt16BE = function readInt16BE(offset = 0) {
         boundsError(offset, this.length - 2);
     }
     const val = first * 2 ** 8 + last;
-    return val | (val & 2 ** 15) * 131070;
+    return val | (val & 2 ** 15) * 0x1fffe;
 };
 Buffer1.prototype.readInt32LE = function readInt32LE(offset = 0) {
     validateNumber(offset, "offset");
@@ -6331,60 +6332,60 @@ Buffer1.prototype.readDoubleBE = function readDoubleBE(offset) {
 };
 Buffer1.prototype.writeUintLE = Buffer1.prototype.writeUIntLE = function writeUIntLE(value, offset, byteLength5) {
     if (byteLength5 === 6) {
-        return writeU_Int48LE(this, value, offset, 0, 281474976710655);
+        return writeU_Int48LE(this, value, offset, 0, 0xffffffffffff);
     }
     if (byteLength5 === 5) {
-        return writeU_Int40LE(this, value, offset, 0, 1099511627775);
+        return writeU_Int40LE(this, value, offset, 0, 0xffffffffff);
     }
     if (byteLength5 === 3) {
-        return writeU_Int24LE(this, value, offset, 0, 16777215);
+        return writeU_Int24LE(this, value, offset, 0, 0xffffff);
     }
     if (byteLength5 === 4) {
-        return writeU_Int32LE(this, value, offset, 0, 4294967295);
+        return writeU_Int32LE(this, value, offset, 0, 0xffffffff);
     }
     if (byteLength5 === 2) {
-        return writeU_Int16LE(this, value, offset, 0, 65535);
+        return writeU_Int16LE(this, value, offset, 0, 0xffff);
     }
     if (byteLength5 === 1) {
-        return writeU_Int8(this, value, offset, 0, 255);
+        return writeU_Int8(this, value, offset, 0, 0xff);
     }
     boundsError(byteLength5, 6, "byteLength");
 };
 Buffer1.prototype.writeUintBE = Buffer1.prototype.writeUIntBE = function writeUIntBE(value, offset, byteLength6) {
     if (byteLength6 === 6) {
-        return writeU_Int48BE(this, value, offset, 0, 281474976710655);
+        return writeU_Int48BE(this, value, offset, 0, 0xffffffffffff);
     }
     if (byteLength6 === 5) {
-        return writeU_Int40BE(this, value, offset, 0, 1099511627775);
+        return writeU_Int40BE(this, value, offset, 0, 0xffffffffff);
     }
     if (byteLength6 === 3) {
-        return writeU_Int24BE(this, value, offset, 0, 16777215);
+        return writeU_Int24BE(this, value, offset, 0, 0xffffff);
     }
     if (byteLength6 === 4) {
-        return writeU_Int32BE(this, value, offset, 0, 4294967295);
+        return writeU_Int32BE(this, value, offset, 0, 0xffffffff);
     }
     if (byteLength6 === 2) {
-        return writeU_Int16BE(this, value, offset, 0, 65535);
+        return writeU_Int16BE(this, value, offset, 0, 0xffff);
     }
     if (byteLength6 === 1) {
-        return writeU_Int8(this, value, offset, 0, 255);
+        return writeU_Int8(this, value, offset, 0, 0xff);
     }
     boundsError(byteLength6, 6, "byteLength");
 };
 Buffer1.prototype.writeUint8 = Buffer1.prototype.writeUInt8 = function writeUInt8(value, offset = 0) {
-    return writeU_Int8(this, value, offset, 0, 255);
+    return writeU_Int8(this, value, offset, 0, 0xff);
 };
 Buffer1.prototype.writeUint16LE = Buffer1.prototype.writeUInt16LE = function writeUInt16LE(value, offset = 0) {
-    return writeU_Int16LE(this, value, offset, 0, 65535);
+    return writeU_Int16LE(this, value, offset, 0, 0xffff);
 };
 Buffer1.prototype.writeUint16BE = Buffer1.prototype.writeUInt16BE = function writeUInt16BE(value, offset = 0) {
-    return writeU_Int16BE(this, value, offset, 0, 65535);
+    return writeU_Int16BE(this, value, offset, 0, 0xffff);
 };
 Buffer1.prototype.writeUint32LE = Buffer1.prototype.writeUInt32LE = function writeUInt32LE(value, offset = 0) {
-    return _writeUInt32LE(this, value, offset, 0, 4294967295);
+    return _writeUInt32LE(this, value, offset, 0, 0xffffffff);
 };
 Buffer1.prototype.writeUint32BE = Buffer1.prototype.writeUInt32BE = function writeUInt32BE(value, offset = 0) {
-    return _writeUInt32BE(this, value, offset, 0, 4294967295);
+    return _writeUInt32BE(this, value, offset, 0, 0xffffffff);
 };
 function wrtBigUInt64LE(buf, value, offset, min, max) {
     checkIntBI(value, min, max, buf, offset, 7);
@@ -6434,60 +6435,60 @@ Buffer1.prototype.writeBigUint64BE = Buffer1.prototype.writeBigUInt64BE = define
 });
 Buffer1.prototype.writeIntLE = function writeIntLE(value, offset, byteLength7) {
     if (byteLength7 === 6) {
-        return writeU_Int48LE(this, value, offset, -140737488355328, 140737488355327);
+        return writeU_Int48LE(this, value, offset, -0x800000000000, 0x7fffffffffff);
     }
     if (byteLength7 === 5) {
-        return writeU_Int40LE(this, value, offset, -549755813888, 549755813887);
+        return writeU_Int40LE(this, value, offset, -0x8000000000, 0x7fffffffff);
     }
     if (byteLength7 === 3) {
-        return writeU_Int24LE(this, value, offset, -8388608, 8388607);
+        return writeU_Int24LE(this, value, offset, -0x800000, 0x7fffff);
     }
     if (byteLength7 === 4) {
-        return writeU_Int32LE(this, value, offset, -2147483648, 2147483647);
+        return writeU_Int32LE(this, value, offset, -0x80000000, 0x7fffffff);
     }
     if (byteLength7 === 2) {
-        return writeU_Int16LE(this, value, offset, -32768, 32767);
+        return writeU_Int16LE(this, value, offset, -0x8000, 0x7fff);
     }
     if (byteLength7 === 1) {
-        return writeU_Int8(this, value, offset, -128, 127);
+        return writeU_Int8(this, value, offset, -0x80, 0x7f);
     }
     boundsError(byteLength7, 6, "byteLength");
 };
 Buffer1.prototype.writeIntBE = function writeIntBE(value, offset, byteLength8) {
     if (byteLength8 === 6) {
-        return writeU_Int48BE(this, value, offset, -140737488355328, 140737488355327);
+        return writeU_Int48BE(this, value, offset, -0x800000000000, 0x7fffffffffff);
     }
     if (byteLength8 === 5) {
-        return writeU_Int40BE(this, value, offset, -549755813888, 549755813887);
+        return writeU_Int40BE(this, value, offset, -0x8000000000, 0x7fffffffff);
     }
     if (byteLength8 === 3) {
-        return writeU_Int24BE(this, value, offset, -8388608, 8388607);
+        return writeU_Int24BE(this, value, offset, -0x800000, 0x7fffff);
     }
     if (byteLength8 === 4) {
-        return writeU_Int32BE(this, value, offset, -2147483648, 2147483647);
+        return writeU_Int32BE(this, value, offset, -0x80000000, 0x7fffffff);
     }
     if (byteLength8 === 2) {
-        return writeU_Int16BE(this, value, offset, -32768, 32767);
+        return writeU_Int16BE(this, value, offset, -0x8000, 0x7fff);
     }
     if (byteLength8 === 1) {
-        return writeU_Int8(this, value, offset, -128, 127);
+        return writeU_Int8(this, value, offset, -0x80, 0x7f);
     }
     boundsError(byteLength8, 6, "byteLength");
 };
 Buffer1.prototype.writeInt8 = function writeInt8(value, offset = 0) {
-    return writeU_Int8(this, value, offset, -128, 127);
+    return writeU_Int8(this, value, offset, -0x80, 0x7f);
 };
 Buffer1.prototype.writeInt16LE = function writeInt16LE(value, offset = 0) {
-    return writeU_Int16LE(this, value, offset, -32768, 32767);
+    return writeU_Int16LE(this, value, offset, -0x8000, 0x7fff);
 };
 Buffer1.prototype.writeInt16BE = function writeInt16BE(value, offset = 0) {
-    return writeU_Int16BE(this, value, offset, -32768, 32767);
+    return writeU_Int16BE(this, value, offset, -0x8000, 0x7fff);
 };
 Buffer1.prototype.writeInt32LE = function writeInt32LE(value, offset = 0) {
-    return writeU_Int32LE(this, value, offset, -2147483648, 2147483647);
+    return writeU_Int32LE(this, value, offset, -0x80000000, 0x7fffffff);
 };
 Buffer1.prototype.writeInt32BE = function writeInt32BE(value, offset = 0) {
-    return writeU_Int32BE(this, value, offset, -2147483648, 2147483647);
+    return writeU_Int32BE(this, value, offset, -0x80000000, 0x7fffffff);
 };
 Buffer1.prototype.writeBigInt64LE = defineBigIntMethod(function writeBigInt64LE(value, offset = 0) {
     return wrtBigUInt64LE(this, value, offset, -BigInt("0x8000000000000000"), BigInt("0x7fffffffffffffff"));
@@ -7130,9 +7131,9 @@ function mapEquiv(map1, map2, strict, memos) {
     }
     return true;
 }
-function mapHasEqualEntry(set, map1, key1, item1, strict, memos) {
+function mapHasEqualEntry(set, map3, key1, item1, strict, memos) {
     for (const key2 of set){
-        if (innerDeepEqual(key1, key2, strict, memos) && innerDeepEqual(item1, map1.get(key2), strict, memos)) {
+        if (innerDeepEqual(key1, key2, strict, memos) && innerDeepEqual(item1, map3.get(key2), strict, memos)) {
             set.delete(key2);
             return true;
         }
@@ -8736,10 +8737,10 @@ function ucs2decode(str) {
     const length = str.length;
     while(counter < length){
         const value = str.charCodeAt(counter++);
-        if (value >= 55296 && value <= 56319 && counter < length) {
+        if (value >= 0xD800 && value <= 0xDBFF && counter < length) {
             const extra = str.charCodeAt(counter++);
-            if ((extra & 64512) == 56320) {
-                output.push(((value & 1023) << 10) + (extra & 1023) + 65536);
+            if ((extra & 0xFC00) == 0xDC00) {
+                output.push(((value & 0x3FF) << 10) + (extra & 0x3FF) + 0x10000);
             } else {
                 output.push(value);
                 counter--;
@@ -8766,11 +8767,11 @@ function encode2(str) {
     const output = [];
     const input = ucs2decode(str);
     const inputLength = input.length;
-    let n6 = 128;
+    let n7 = 128;
     let delta = 0;
     let bias = 72;
     for (const currentValue of input){
-        if (currentValue < 128) {
+        if (currentValue < 0x80) {
             output.push(String.fromCharCode(currentValue));
         }
     }
@@ -8782,21 +8783,21 @@ function encode2(str) {
     while(handledCPCount < inputLength){
         let m = 2147483647;
         for (const currentValue of input){
-            if (currentValue >= n6 && currentValue < m) {
+            if (currentValue >= n7 && currentValue < m) {
                 m = currentValue;
             }
         }
         const handledCPCountPlusOne = handledCPCount + 1;
-        if (m - n6 > Math.floor((2147483647 - delta) / handledCPCountPlusOne)) {
+        if (m - n7 > Math.floor((2147483647 - delta) / handledCPCountPlusOne)) {
             error("overflow");
         }
-        delta += (m - n6) * handledCPCountPlusOne;
-        n6 = m;
+        delta += (m - n7) * handledCPCountPlusOne;
+        n7 = m;
         for (const currentValue1 of input){
-            if (currentValue1 < n6 && ++delta > 2147483647) {
+            if (currentValue1 < n7 && ++delta > 2147483647) {
                 error("overflow");
             }
-            if (currentValue1 == n6) {
+            if (currentValue1 == n7) {
                 let q = delta;
                 for(let k = 36;; k += base){
                     const t1 = k <= bias ? 1 : k >= bias + 26 ? 26 : k - bias;
@@ -8815,7 +8816,7 @@ function encode2(str) {
             }
         }
         ++delta;
-        ++n6;
+        ++n7;
     }
     return output.join("");
 }
@@ -9093,7 +9094,7 @@ function encodeStr(str, noEscapeTable, hexTable1) {
     let lastPos = 0;
     for(let i1 = 0; i1 < len; i1++){
         let c = str.charCodeAt(i1);
-        if (c < 128) {
+        if (c < 0x80) {
             if (noEscapeTable[c] === 1) continue;
             if (lastPos < i1) out += str.slice(lastPos, i1);
             lastPos = i1 + 1;
@@ -9101,22 +9102,22 @@ function encodeStr(str, noEscapeTable, hexTable1) {
             continue;
         }
         if (lastPos < i1) out += str.slice(lastPos, i1);
-        if (c < 2048) {
+        if (c < 0x800) {
             lastPos = i1 + 1;
-            out += hexTable1[192 | c >> 6] + hexTable1[128 | c & 63];
+            out += hexTable1[0xc0 | c >> 6] + hexTable1[0x80 | c & 0x3f];
             continue;
         }
-        if (c < 55296 || c >= 57344) {
+        if (c < 0xd800 || c >= 0xe000) {
             lastPos = i1 + 1;
-            out += hexTable1[224 | c >> 12] + hexTable1[128 | c >> 6 & 63] + hexTable1[128 | c & 63];
+            out += hexTable1[0xe0 | c >> 12] + hexTable1[0x80 | c >> 6 & 0x3f] + hexTable1[0x80 | c & 0x3f];
             continue;
         }
         ++i1;
         if (i1 >= len) throw new ERR_INVALID_URI();
-        const c2 = str.charCodeAt(i1) & 1023;
+        const c2 = str.charCodeAt(i1) & 0x3ff;
         lastPos = i1 + 1;
-        c = 65536 + ((c & 1023) << 10 | c2);
-        out += hexTable1[240 | c >> 18] + hexTable1[128 | c >> 12 & 63] + hexTable1[128 | c >> 6 & 63] + hexTable1[128 | c & 63];
+        c = 0x10000 + ((c & 0x3ff) << 10 | c2);
+        out += hexTable1[0xf0 | c >> 18] + hexTable1[0x80 | c >> 12 & 0x3f] + hexTable1[0x80 | c >> 6 & 0x3f] + hexTable1[0x80 | c & 0x3f];
     }
     if (lastPos === 0) return str;
     if (lastPos < len) return out + str.slice(lastPos);
@@ -9706,7 +9707,7 @@ function encodeStringified(v, encode21) {
         return v.length ? encode21(v) : "";
     }
     if (typeof v === "number" && isFinite(v)) {
-        return Math.abs(v) < 1000000000000000000000 ? "" + v : encode21("" + v);
+        return Math.abs(v) < 1e21 ? "" + v : encode21("" + v);
     }
     if (typeof v === "bigint") {
         return "" + v;
@@ -10963,9 +10964,9 @@ function o(a2) {
         if (46 === s4) {
             if (o5 - i3 > 64 || 46 === e4 || 45 === e4 || 95 === e4) return !1;
             i3 = o5;
-        } else if (!1 === ((function(a3) {
+        } else if (!1 === (function(a3) {
             return a3 >= 97 && a3 <= 122 || a3 >= 48 && a3 <= 57 || a3 > 127;
-        })(s4) || 45 === s4 || 95 === s4)) return !1;
+        }(s4) || 45 === s4 || 95 === s4)) return !1;
         e4 = s4;
     }
     return s3 - i3 - 1 <= 63 && 45 !== e4;
@@ -10983,7 +10984,7 @@ const i2 = function({ allowIcannDomains: a4 = !0 , allowPrivateDomains: o7 = !1 
 }({});
 function e(e6, s6, n5, r4, t3) {
     const c2 = function(a5) {
-        return void 0 === a5 ? i2 : (function({ allowIcannDomains: a6 = !0 , allowPrivateDomains: o8 = !1 , detectIp: i5 = !0 , extractHostname: e7 = !0 , mixedInputs: s7 = !0 , validHosts: n6 = null , validateHostname: r5 = !0  }) {
+        return void 0 === a5 ? i2 : function({ allowIcannDomains: a6 = !0 , allowPrivateDomains: o8 = !1 , detectIp: i5 = !0 , extractHostname: e7 = !0 , mixedInputs: s7 = !0 , validHosts: n6 = null , validateHostname: r5 = !0  }) {
             return {
                 allowIcannDomains: a6,
                 allowPrivateDomains: o8,
@@ -10993,9 +10994,9 @@ function e(e6, s6, n5, r4, t3) {
                 validHosts: n6,
                 validateHostname: r5
             };
-        })(a5);
+        }(a5);
     }(r4);
-    return "string" != typeof e6 ? t3 : (!1 === c2.extractHostname ? t3.hostname = e6 : !0 === c2.mixedInputs ? t3.hostname = a(e6, o(e6)) : t3.hostname = a(e6, !1), 0 === s6 || null === t3.hostname || !0 === c2.detectIp && (t3.isIp = (function(a7) {
+    return "string" != typeof e6 ? t3 : (!1 === c2.extractHostname ? t3.hostname = e6 : !0 === c2.mixedInputs ? t3.hostname = a(e6, o(e6)) : t3.hostname = a(e6, !1), 0 === s6 || null === t3.hostname || !0 === c2.detectIp && (t3.isIp = function(a7) {
         if (a7.length < 3) return !1;
         let o9 = "[" === a7[0] ? 1 : 0, i6 = a7.length;
         if ("]" === a7[i6 - 1] && (i6 -= 1), i6 - o9 > 39) return !1;
@@ -11006,7 +11007,7 @@ function e(e6, s6, n5, r4, t3) {
             else if (0 == (i7 >= 48 && i7 <= 57 || i7 >= 97 && i7 <= 102 || i7 >= 65 && i7 <= 90)) return !1;
         }
         return e8;
-    })(u1 = t3.hostname) || (function(a8) {
+    }(u1 = t3.hostname) || function(a8) {
         if (a8.length < 7) return !1;
         if (a8.length > 15) return !1;
         let o10 = 0;
@@ -11016,23 +11017,23 @@ function e(e6, s6, n5, r4, t3) {
             else if (e9 < 48 || e9 > 57) return !1;
         }
         return 3 === o10 && 46 !== a8.charCodeAt(0) && 46 !== a8.charCodeAt(a8.length - 1);
-    })(u1), !0 === t3.isIp) ? t3 : !0 === c2.validateHostname && !0 === c2.extractHostname && !1 === o(t3.hostname) ? (t3.hostname = null, t3) : (n5(t3.hostname, c2, t3), 2 === s6 || null === t3.publicSuffix ? t3 : (t3.domain = (function(a10, o11, i9) {
+    }(u1), !0 === t3.isIp) ? t3 : !0 === c2.validateHostname && !0 === c2.extractHostname && !1 === o(t3.hostname) ? (t3.hostname = null, t3) : (n5(t3.hostname, c2, t3), 2 === s6 || null === t3.publicSuffix ? t3 : (t3.domain = function(a10, o11, i9) {
         if (null !== i9.validHosts) {
             const a9 = i9.validHosts;
             for(let i10 = 0; i10 < a9.length; i10 += 1){
                 const e10 = a9[i10];
-                if (!0 === (function(a11, o12) {
+                if (!0 === function(a11, o12) {
                     return !!a11.endsWith(o12) && (a11.length === o12.length || "." === a11[a11.length - o12.length - 1]);
-                })(o11, e10)) return e10;
+                }(o11, e10)) return e10;
             }
         }
-        return a10.length === o11.length ? null : (function(a12, o13) {
+        return a10.length === o11.length ? null : function(a12, o13) {
             const i11 = a12.length - o13.length - 2, e11 = a12.lastIndexOf(".", i11);
             return -1 === e11 ? a12 : a12.slice(e11 + 1);
-        })(o11, a10);
-    })(t3.publicSuffix, t3.hostname, c2), 3 === s6 || null === t3.domain ? t3 : (t3.subdomain = (function(a13, o14) {
+        }(o11, a10);
+    }(t3.publicSuffix, t3.hostname, c2), 3 === s6 || null === t3.domain ? t3 : (t3.subdomain = function(a13, o14) {
         return o14.length === a13.length ? "" : a13.slice(0, -o14.length - 1);
-    })(t3.hostname, t3.domain), 4 === s6 || (t3.domainWithoutSuffix = (l1 = t3.domain, m1 = t3.publicSuffix, l1.slice(0, -m1.length - 1))), t3))));
+    }(t3.hostname, t3.domain), 4 === s6 || (t3.domainWithoutSuffix = (l1 = t3.domain, m1 = t3.publicSuffix, l1.slice(0, -m1.length - 1))), t3))));
     var u1, l1, m1;
 }
 const s = function() {
@@ -13589,7 +13590,7 @@ const s = function() {
             hu: {
                 $: 1,
                 succ: {
-                    2000: a15,
+                    2e3: a15,
                     co: a15,
                     info: a15,
                     org: a15,
@@ -22820,7 +22821,7 @@ function r(a16, o17, i13, e13) {
     return s9;
 }
 function t(a17, o19, i14) {
-    if (!0 === (function(a18, o20, i15) {
+    if (!0 === function(a18, o20, i15) {
         if (!1 === o20.allowPrivateDomains && a18.length > 3) {
             const o21 = a18.length - 1, e15 = a18.charCodeAt(o21), s10 = a18.charCodeAt(o21 - 1), n9 = a18.charCodeAt(o21 - 2), r7 = a18.charCodeAt(o21 - 3);
             if (109 === e15 && 111 === s10 && 99 === n9 && 46 === r7) return i15.isIcann = !0, i15.isPrivate = !1, i15.publicSuffix = "com", !0;
@@ -22831,7 +22832,7 @@ function t(a17, o19, i14) {
             if (101 === e15 && 100 === s10 && 46 === n9) return i15.isIcann = !0, i15.isPrivate = !1, i15.publicSuffix = "de", !0;
         }
         return !1;
-    })(a17, o19, i14)) return;
+    }(a17, o19, i14)) return;
     const e14 = a17.split("."), t5 = (!0 === o19.allowPrivateDomains ? 2 : 0) | (!0 === o19.allowIcannDomains ? 1 : 0), c4 = r(e14, s, e14.length - 1, t5);
     if (null !== c4) return i14.isIcann = c4.isIcann, i14.isPrivate = c4.isPrivate, void (i14.publicSuffix = e14.slice(c4.index + 1).join("."));
     const u3 = r(e14, n, e14.length - 1, t5);
@@ -22893,10 +22894,10 @@ function ucs2decode1(string) {
     const length = string.length;
     while(counter < length){
         const value = string.charCodeAt(counter++);
-        if (value >= 55296 && value <= 56319 && counter < length) {
+        if (value >= 0xD800 && value <= 0xDBFF && counter < length) {
             const extra = string.charCodeAt(counter++);
-            if ((extra & 64512) == 56320) {
-                output.push(((value & 1023) << 10) + (extra & 1023) + 65536);
+            if ((extra & 0xFC00) == 0xDC00) {
+                output.push(((value & 0x3FF) << 10) + (extra & 0x3FF) + 0x10000);
             } else {
                 output.push(value);
                 counter--;
@@ -22910,14 +22911,14 @@ function ucs2decode1(string) {
 const ucs2encode = (array)=>String.fromCodePoint(...array)
 ;
 const basicToDigit = function(codePoint) {
-    if (codePoint - 48 < 10) {
-        return codePoint - 22;
+    if (codePoint - 0x30 < 0x0A) {
+        return codePoint - 0x16;
     }
-    if (codePoint - 65 < 26) {
-        return codePoint - 65;
+    if (codePoint - 0x41 < 0x1A) {
+        return codePoint - 0x41;
     }
-    if (codePoint - 97 < 26) {
-        return codePoint - 97;
+    if (codePoint - 0x61 < 0x1A) {
+        return codePoint - 0x61;
     }
     return 36;
 };
@@ -22937,14 +22938,14 @@ const decode3 = function(input) {
     const output = [];
     const inputLength = input.length;
     let i75 = 0;
-    let n7 = 128;
+    let n10 = 128;
     let bias = 72;
     let basic = input.lastIndexOf(delimiter4);
     if (basic < 0) {
         basic = 0;
     }
     for(let j = 0; j < basic; ++j){
-        if (input.charCodeAt(j) >= 128) {
+        if (input.charCodeAt(j) >= 0x80) {
             error1('not-basic');
         }
         output.push(input.charCodeAt(j));
@@ -22960,11 +22961,11 @@ const decode3 = function(input) {
                 error1('overflow');
             }
             i75 += digit * w;
-            const t2 = k <= bias ? 1 : k >= bias + 26 ? 26 : k - bias;
-            if (digit < t2) {
+            const t6 = k <= bias ? 1 : k >= bias + 26 ? 26 : k - bias;
+            if (digit < t6) {
                 break;
             }
-            const baseMinusT = 36 - t2;
+            const baseMinusT = 36 - t6;
             if (w > floor(2147483647 / baseMinusT)) {
                 error1('overflow');
             }
@@ -22972,12 +22973,12 @@ const decode3 = function(input) {
         }
         const out = output.length + 1;
         bias = adapt1(i75 - oldi, out, oldi == 0);
-        if (floor(i75 / out) > 2147483647 - n7) {
+        if (floor(i75 / out) > 2147483647 - n10) {
             error1('overflow');
         }
-        n7 += floor(i75 / out);
+        n10 += floor(i75 / out);
         i75 %= out;
-        output.splice(i75++, 0, n7);
+        output.splice(i75++, 0, n10);
     }
     return String.fromCodePoint(...output);
 };
@@ -22985,11 +22986,11 @@ const encode4 = function(input) {
     const output = [];
     input = ucs2decode1(input);
     let inputLength = input.length;
-    let n8 = 128;
+    let n11 = 128;
     let delta = 0;
     let bias = 72;
     for (const currentValue of input){
-        if (currentValue < 128) {
+        if (currentValue < 0x80) {
             output.push(stringFromCharCode(currentValue));
         }
     }
@@ -23001,30 +23002,30 @@ const encode4 = function(input) {
     while(handledCPCount < inputLength){
         let m = 2147483647;
         for (const currentValue of input){
-            if (currentValue >= n8 && currentValue < m) {
+            if (currentValue >= n11 && currentValue < m) {
                 m = currentValue;
             }
         }
         const handledCPCountPlusOne = handledCPCount + 1;
-        if (m - n8 > floor((2147483647 - delta) / handledCPCountPlusOne)) {
+        if (m - n11 > floor((2147483647 - delta) / handledCPCountPlusOne)) {
             error1('overflow');
         }
-        delta += (m - n8) * handledCPCountPlusOne;
-        n8 = m;
+        delta += (m - n11) * handledCPCountPlusOne;
+        n11 = m;
         for (const currentValue1 of input){
-            if (currentValue1 < n8 && ++delta > 2147483647) {
+            if (currentValue1 < n11 && ++delta > 2147483647) {
                 error1('overflow');
             }
-            if (currentValue1 == n8) {
+            if (currentValue1 == n11) {
                 let q = delta;
                 for(let k = 36;; k += base1){
-                    const t3 = k <= bias ? 1 : k >= bias + 26 ? 26 : k - bias;
-                    if (q < t3) {
+                    const t7 = k <= bias ? 1 : k >= bias + 26 ? 26 : k - bias;
+                    if (q < t7) {
                         break;
                     }
-                    const qMinusT = q - t3;
-                    const baseMinusT = 36 - t3;
-                    output.push(stringFromCharCode(digitToBasic1(t3 + qMinusT % baseMinusT, 0)));
+                    const qMinusT = q - t7;
+                    const baseMinusT = 36 - t7;
+                    output.push(stringFromCharCode(digitToBasic1(t7 + qMinusT % baseMinusT, 0)));
                     q = floor(qMinusT / baseMinusT);
                 }
                 output.push(stringFromCharCode(digitToBasic1(q, 0)));
@@ -23034,7 +23035,7 @@ const encode4 = function(input) {
             }
         }
         ++delta;
-        ++n8;
+        ++n11;
     }
     return output.join('');
 };
@@ -23079,10 +23080,10 @@ const encodeBase64 = (input)=>{
     if (typeof unencoded === 'string') {
         unencoded = encoder.encode(unencoded);
     }
-    const CHUNK_SIZE = 32768;
+    const CHUNK_SIZE = 0x8000;
     const arr = [];
     for(let i77 = 0; i77 < unencoded.length; i77 += CHUNK_SIZE){
-        arr.push(String.fromCharCode.apply(null, unencoded.subarray(i77, i77 + 32768)));
+        arr.push(String.fromCharCode.apply(null, unencoded.subarray(i77, i77 + 0x8000)));
     }
     return btoa(arr.join(''));
 };
@@ -23372,7 +23373,7 @@ const toSPKI = (key)=>{
 const findOid = (keyData, oid, from = 0)=>{
     if (from === 0) {
         oid.unshift(oid.length);
-        oid.unshift(6);
+        oid.unshift(0x06);
     }
     let i79 = keyData.indexOf(oid[0], from);
     if (i79 === -1) return false;
@@ -23384,42 +23385,42 @@ const findOid = (keyData, oid, from = 0)=>{
 const getNamedCurve1 = (keyData)=>{
     switch(true){
         case findOid(keyData, [
-            42,
-            134,
-            72,
-            206,
-            61,
-            3,
-            1,
-            7
+            0x2a,
+            0x86,
+            0x48,
+            0xce,
+            0x3d,
+            0x03,
+            0x01,
+            0x07
         ]):
             return 'P-256';
         case findOid(keyData, [
-            43,
-            129,
-            4,
-            0,
-            34
+            0x2b,
+            0x81,
+            0x04,
+            0x00,
+            0x22
         ]):
             return 'P-384';
         case findOid(keyData, [
-            43,
-            129,
-            4,
-            0,
-            35
+            0x2b,
+            0x81,
+            0x04,
+            0x00,
+            0x23
         ]):
             return 'P-521';
         case (isCloudflareWorkers() || isNodeJs()) && findOid(keyData, [
-            43,
-            101,
-            112
+            0x2b,
+            0x65,
+            0x70
         ]):
             return 'Ed25519';
         case isNodeJs() && findOid(keyData, [
-            43,
-            101,
-            113
+            0x2b,
+            0x65,
+            0x71
         ]):
             return 'Ed448';
         default:
@@ -23873,7 +23874,7 @@ function validateCrit(Err, recognizedDefault, recognizedOption, protectedHeader,
     return new Set(protectedHeader.crit);
 }
 const validateAlgorithms = (option, algorithms)=>{
-    if (algorithms !== undefined && (!Array.isArray(algorithms) || algorithms.some((s8)=>typeof s8 !== 'string'
+    if (algorithms !== undefined && (!Array.isArray(algorithms) || algorithms.some((s11)=>typeof s11 !== 'string'
     ))) {
         throw new TypeError(`"${option}" option must be an array of strings`);
     }
@@ -24296,8 +24297,8 @@ class BufferSourceConverter {
     static isArrayBufferView(data) {
         return ArrayBuffer.isView(data) || data && this.isArrayBuffer(data.buffer);
     }
-    static isEqual(a5, b) {
-        const aView = BufferSourceConverter.toUint8Array(a5);
+    static isEqual(a20, b) {
+        const aView = BufferSourceConverter.toUint8Array(a20);
         const bView = BufferSourceConverter.toUint8Array(b);
         if (aView.length !== bView.byteLength) {
             return false;
@@ -24334,10 +24335,10 @@ class BufferSourceConverter {
 }
 class Utf8Converter {
     static fromString(text) {
-        const s9 = unescape(encodeURIComponent(text));
-        const uintArray = new Uint8Array(s9.length);
-        for(let i81 = 0; i81 < s9.length; i81++){
-            uintArray[i81] = s9.charCodeAt(i81);
+        const s12 = unescape(encodeURIComponent(text));
+        const uintArray = new Uint8Array(s12.length);
+        for(let i81 = 0; i81 < s12.length; i81++){
+            uintArray[i81] = s12.charCodeAt(i81);
         }
         return uintArray.buffer;
     }
@@ -24652,8 +24653,8 @@ function utilConcatView(...views) {
 function utilDecodeTC() {
     const buf = new Uint8Array(this.valueHex);
     if (this.valueHex.byteLength >= 2) {
-        const condition1 = buf[0] === 255 && buf[1] & 128;
-        const condition2 = buf[0] === 0 && (buf[1] & 128) === 0;
+        const condition1 = buf[0] === 0xFF && buf[1] & 0x80;
+        const condition2 = buf[0] === 0x00 && (buf[1] & 0x80) === 0x00;
         if (condition1 || condition2) {
             this.warnings.push("Needlessly long format");
         }
@@ -24663,14 +24664,14 @@ function utilDecodeTC() {
     for(let i92 = 0; i92 < this.valueHex.byteLength; i92++){
         bigIntView[i92] = 0;
     }
-    bigIntView[0] = buf[0] & 128;
+    bigIntView[0] = buf[0] & 0x80;
     const bigInt = utilFromBase(bigIntView, 8);
     const smallIntBuffer = new ArrayBuffer(this.valueHex.byteLength);
     const smallIntView = new Uint8Array(smallIntBuffer);
     for(let j = 0; j < this.valueHex.byteLength; j++){
         smallIntView[j] = buf[j];
     }
-    smallIntView[0] &= 127;
+    smallIntView[0] &= 0x7F;
     const smallInt = utilFromBase(smallIntView, 8);
     return smallInt - bigInt;
 }
@@ -24683,12 +24684,12 @@ function utilEncodeTC(value) {
                 const smallInt = bigInt - modValue;
                 const retBuf = utilToBase(smallInt, 8, i93);
                 const retView = new Uint8Array(retBuf);
-                retView[0] |= 128;
+                retView[0] |= 0x80;
                 return retBuf;
             }
             let retBuf = utilToBase(modValue, 8, i93);
             let retView = new Uint8Array(retBuf);
-            if (retView[0] & 128) {
+            if (retView[0] & 0x80) {
                 const tempBuf = retBuf.slice(0);
                 const tempView = new Uint8Array(tempBuf);
                 retBuf = new ArrayBuffer(retBuf.byteLength + 1);
@@ -24696,7 +24697,7 @@ function utilEncodeTC(value) {
                 for(let k = 0; k < tempBuf.byteLength; k++){
                     retView[k + 1] = tempView[k];
                 }
-                retView[0] = 0;
+                retView[0] = 0x00;
             }
             return retBuf;
         }
@@ -24759,9 +24760,9 @@ function toBase64(input, useUrlTemplate = false, skipPadding = false, skipLeadin
         }
         const chr3 = input.charCodeAt(i97++);
         const enc1 = chr1 >> 2;
-        const enc2 = (chr1 & 3) << 4 | chr2 >> 4;
-        let enc3 = (chr2 & 15) << 2 | chr3 >> 6;
-        let enc4 = chr3 & 63;
+        const enc2 = (chr1 & 0x03) << 4 | chr2 >> 4;
+        let enc3 = (chr2 & 0x0F) << 2 | chr3 >> 6;
+        let enc4 = chr3 & 0x3F;
         if (flag1 === 1) {
             enc3 = enc4 = 64;
         } else {
@@ -24794,18 +24795,18 @@ function fromBase64(input, useUrlTemplate = false, cutTailZeros = false) {
         return 64;
     }
     function test(incoming) {
-        return incoming === 64 ? 0 : incoming;
+        return incoming === 64 ? 0x00 : incoming;
     }
     let i1 = 0;
     let output = "";
     while(i1 < input.length){
         const enc1 = indexOf(input.charAt(i1++));
-        const enc2 = i1 >= input.length ? 0 : indexOf(input.charAt(i1++));
-        const enc3 = i1 >= input.length ? 0 : indexOf(input.charAt(i1++));
-        const enc4 = i1 >= input.length ? 0 : indexOf(input.charAt(i1++));
+        const enc2 = i1 >= input.length ? 0x00 : indexOf(input.charAt(i1++));
+        const enc3 = i1 >= input.length ? 0x00 : indexOf(input.charAt(i1++));
+        const enc4 = i1 >= input.length ? 0x00 : indexOf(input.charAt(i1++));
         const chr1 = test(enc1) << 2 | test(enc2) >> 4;
-        const chr2 = (test(enc2) & 15) << 4 | test(enc3) >> 2;
-        const chr3 = (test(enc3) & 3) << 6 | test(enc4);
+        const chr2 = (test(enc2) & 0x0F) << 4 | test(enc3) >> 2;
+        const chr3 = (test(enc3) & 0x03) << 6 | test(enc4);
         output += String.fromCharCode(chr1);
         if (enc3 !== 64) {
             output += String.fromCharCode(chr2);
@@ -25041,27 +25042,27 @@ class LocalIdentificationBlock extends HexBlock(LocalBaseBlock) {
         let firstOctet = 0;
         switch(this.tagClass){
             case 1:
-                firstOctet |= 0;
+                firstOctet |= 0x00;
                 break;
             case 2:
-                firstOctet |= 64;
+                firstOctet |= 0x40;
                 break;
             case 3:
-                firstOctet |= 128;
+                firstOctet |= 0x80;
                 break;
             case 4:
-                firstOctet |= 192;
+                firstOctet |= 0xC0;
                 break;
             default:
                 this.error = "Unknown tag class";
                 return EMPTY_BUFFER;
         }
-        if (this.isConstructed) firstOctet |= 32;
+        if (this.isConstructed) firstOctet |= 0x20;
         if (this.tagNumber < 31 && !this.isHexOnly) {
             const retView = new Uint8Array(1);
             if (!sizeOnly) {
                 let number = this.tagNumber;
-                number &= 31;
+                number &= 0x1F;
                 firstOctet |= number;
                 retView[0] = firstOctet;
             }
@@ -25072,18 +25073,18 @@ class LocalIdentificationBlock extends HexBlock(LocalBaseBlock) {
             const encodedView = new Uint8Array(encodedBuf);
             const size = encodedBuf.byteLength;
             const retView = new Uint8Array(size + 1);
-            retView[0] = firstOctet | 31;
+            retView[0] = firstOctet | 0x1F;
             if (!sizeOnly) {
-                for(let i102 = 0; i102 < size - 1; i102++)retView[i102 + 1] = encodedView[i102] | 128;
+                for(let i102 = 0; i102 < size - 1; i102++)retView[i102 + 1] = encodedView[i102] | 0x80;
                 retView[size] = encodedView[size - 1];
             }
             return retView.buffer;
         }
         const retView = new Uint8Array(this.valueHexView.byteLength + 1);
-        retView[0] = firstOctet | 31;
+        retView[0] = firstOctet | 0x1F;
         if (!sizeOnly) {
             const curView = this.valueHexView;
-            for(let i103 = 0; i103 < curView.length - 1; i103++)retView[i103 + 1] = curView[i103] | 128;
+            for(let i103 = 0; i103 < curView.length - 1; i103++)retView[i103 + 1] = curView[i103] | 0x80;
             retView[this.valueHexView.byteLength] = curView[curView.length - 1];
         }
         return retView.buffer;
@@ -25098,36 +25099,36 @@ class LocalIdentificationBlock extends HexBlock(LocalBaseBlock) {
             this.error = "Zero buffer length";
             return -1;
         }
-        const tagClassMask = intBuffer[0] & 192;
+        const tagClassMask = intBuffer[0] & 0xC0;
         switch(tagClassMask){
-            case 0:
+            case 0x00:
                 this.tagClass = 1;
                 break;
-            case 64:
+            case 0x40:
                 this.tagClass = 2;
                 break;
-            case 128:
+            case 0x80:
                 this.tagClass = 3;
                 break;
-            case 192:
+            case 0xC0:
                 this.tagClass = 4;
                 break;
             default:
                 this.error = "Unknown tag class";
                 return -1;
         }
-        this.isConstructed = (intBuffer[0] & 32) === 32;
+        this.isConstructed = (intBuffer[0] & 0x20) === 0x20;
         this.isHexOnly = false;
-        const tagNumberMask = intBuffer[0] & 31;
-        if (tagNumberMask !== 31) {
+        const tagNumberMask = intBuffer[0] & 0x1F;
+        if (tagNumberMask !== 0x1F) {
             this.tagNumber = tagNumberMask;
             this.blockLength = 1;
         } else {
             let count = 1;
             let intTagNumberBuffer = this.valueHexView = new Uint8Array(255);
             let tagNumberBufferMaxLength = 255;
-            while(intBuffer[count] & 128){
-                intTagNumberBuffer[count - 1] = intBuffer[count] & 127;
+            while(intBuffer[count] & 0x80){
+                intTagNumberBuffer[count - 1] = intBuffer[count] & 0x7F;
                 count++;
                 if (count >= intBuffer.length) {
                     this.error = "End of input reached before message was fully decoded";
@@ -25141,7 +25142,7 @@ class LocalIdentificationBlock extends HexBlock(LocalBaseBlock) {
                 }
             }
             this.blockLength = count + 1;
-            intTagNumberBuffer[count - 1] = intBuffer[count] & 127;
+            intTagNumberBuffer[count - 1] = intBuffer[count] & 0x7F;
             const tempBufferView = new Uint8Array(count);
             for(let i105 = 0; i105 < count; i105++)tempBufferView[i105] = intTagNumberBuffer[i105];
             intTagNumberBuffer = this.valueHexView = new Uint8Array(count);
@@ -25201,22 +25202,22 @@ class LocalLengthBlock extends LocalBaseBlock {
             this.error = "Zero buffer length";
             return -1;
         }
-        if (intBuffer[0] === 255) {
+        if (intBuffer[0] === 0xFF) {
             this.error = "Length block 0xFF is reserved by standard";
             return -1;
         }
-        this.isIndefiniteForm = intBuffer[0] === 128;
+        this.isIndefiniteForm = intBuffer[0] === 0x80;
         if (this.isIndefiniteForm) {
             this.blockLength = 1;
             return inputOffset + this.blockLength;
         }
-        this.longFormUsed = !!(intBuffer[0] & 128);
+        this.longFormUsed = !!(intBuffer[0] & 0x80);
         if (this.longFormUsed === false) {
             this.length = intBuffer[0];
             this.blockLength = 1;
             return inputOffset + this.blockLength;
         }
-        const count = intBuffer[0] & 127;
+        const count = intBuffer[0] & 0x7F;
         if (count > 8) {
             this.error = "Too big integer";
             return -1;
@@ -25227,7 +25228,7 @@ class LocalLengthBlock extends LocalBaseBlock {
         }
         const lenOffset = inputOffset + 1;
         const lengthBufferView = view.subarray(lenOffset, lenOffset + count);
-        if (lengthBufferView[count - 1] === 0) this.warnings.push("Needlessly long encoded length");
+        if (lengthBufferView[count - 1] === 0x00) this.warnings.push("Needlessly long encoded length");
         this.length = utilFromBase(lengthBufferView, 8);
         if (this.longFormUsed && this.length <= 127) this.warnings.push("Unnecessary usage of long length form");
         this.blockLength = count + 1;
@@ -25241,7 +25242,7 @@ class LocalLengthBlock extends LocalBaseBlock {
             retBuf = new ArrayBuffer(1);
             if (sizeOnly === false) {
                 retView = new Uint8Array(retBuf);
-                retView[0] = 128;
+                retView[0] = 0x80;
             }
             return retBuf;
         }
@@ -25255,7 +25256,7 @@ class LocalLengthBlock extends LocalBaseBlock {
             if (sizeOnly) return retBuf;
             const encodedView = new Uint8Array(encodedBuf);
             retView = new Uint8Array(retBuf);
-            retView[0] = encodedBuf.byteLength | 128;
+            retView[0] = encodedBuf.byteLength | 0x80;
             for(let i106 = 0; i106 < encodedBuf.byteLength; i106++)retView[i106 + 1] = encodedView[i106];
             return retBuf;
         }
@@ -25309,7 +25310,7 @@ class BaseBlock extends LocalBaseBlock {
         _writer.write(idBlockBuf);
         if (this.lenBlock.isIndefiniteForm) {
             _writer.write(new Uint8Array([
-                128
+                0x80
             ]).buffer);
             this.valueBlock.toBER(sizeOnly, _writer);
             _writer.write(new ArrayBuffer(2));
@@ -25723,7 +25724,7 @@ class Constructed extends BaseBlock {
     onAsciiEncoding() {
         const values = [];
         for (const value of this.valueBlock.value){
-            values.push(value.toString("ascii").split("\n").map((o1)=>`  ${o1}`
+            values.push(value.toString("ascii").split("\n").map((o23)=>`  ${o23}`
             ).join("\n"));
         }
         const blockName = this.idBlock.tagClass === 3 ? `[${this.idBlock.tagNumber}]` : this.constructor.NAME;
@@ -25779,8 +25780,8 @@ class Null extends BaseBlock {
         const retBuf = new ArrayBuffer(2);
         if (!sizeOnly) {
             const retView = new Uint8Array(retBuf);
-            retView[0] = 5;
-            retView[1] = 0;
+            retView[0] = 0x05;
+            retView[1] = 0x00;
         }
         if (writer) {
             writer.write(retBuf);
@@ -25817,7 +25818,7 @@ class LocalBooleanValueBlock extends HexBlock(ValueBlock) {
         return false;
     }
     set value(value) {
-        this.valueHexView[0] = value ? 255 : 0;
+        this.valueHexView[0] = value ? 0xFF : 0x00;
     }
     fromBER(inputBuffer, inputOffset, inputLength) {
         const inputView = BufferSourceConverter.toUint8Array(inputBuffer);
@@ -26142,9 +26143,9 @@ function viewAdd(first, second) {
     if (c[0] > 0) firstViewCopy = utilConcatView(c, firstViewCopy);
     return firstViewCopy;
 }
-function power2(n9) {
-    if (n9 >= powers2.length) {
-        for(let p = powers2.length; p <= n9; p++){
+function power2(n12) {
+    if (n12 >= powers2.length) {
+        for(let p = powers2.length; p <= n12; p++){
             const c = new Uint8Array([
                 0
             ]);
@@ -26160,7 +26161,7 @@ function power2(n9) {
             powers2.push(digits);
         }
     }
-    return powers2[n9];
+    return powers2[n12];
 }
 function viewSub(first, second) {
     let b = 0;
@@ -26234,7 +26235,7 @@ class LocalIntegerValueBlock extends HexBlock(ValueBlock) {
         const offset = this.fromBER(inputBuffer, inputOffset, inputLength);
         if (offset === -1) return offset;
         const view = this.valueHexView;
-        if (view[0] === 0 && (view[1] & 128) !== 0) {
+        if (view[0] === 0x00 && (view[1] & 0x80) !== 0) {
             this.valueHexView = view.subarray(1);
         } else {
             if (expectedLength !== 0) {
@@ -26249,15 +26250,15 @@ class LocalIntegerValueBlock extends HexBlock(ValueBlock) {
     toDER(sizeOnly = false) {
         const view = this.valueHexView;
         switch(true){
-            case (view[0] & 128) !== 0:
+            case (view[0] & 0x80) !== 0:
                 {
                     const updatedView = new Uint8Array(this.valueHexView.length + 1);
-                    updatedView[0] = 0;
+                    updatedView[0] = 0x00;
                     updatedView.set(view, 1);
                     this.valueHexView = updatedView;
                 }
                 break;
-            case view[0] === 0 && (view[1] & 128) === 0:
+            case view[0] === 0x00 && (view[1] & 0x80) === 0:
                 {
                     this.valueHexView = this.valueHexView.subarray(1);
                 }
@@ -26346,15 +26347,15 @@ class Integer extends BaseBlock {
         const hex = bigIntValue.toString(16).replace(/^-/, "");
         const view = new Uint8Array(Convert.FromHex(hex));
         if (bigIntValue < 0) {
-            const first = new Uint8Array(view.length + (view[0] & 128 ? 1 : 0));
-            first[0] |= 128;
+            const first = new Uint8Array(view.length + (view[0] & 0x80 ? 1 : 0));
+            first[0] |= 0x80;
             const firstInt = BigInt(`0x${Convert.ToHex(first)}`);
             const secondInt = firstInt + bigIntValue;
             const second = BufferSourceConverter.toUint8Array(Convert.FromHex(secondInt.toString(16)));
-            second[0] |= 128;
+            second[0] |= 0x80;
             writer.write(second);
         } else {
-            if (view[0] & 128) {
+            if (view[0] & 0x80) {
                 writer.write(new Uint8Array([
                     0
                 ]));
@@ -26417,20 +26418,20 @@ class LocalSidValueBlock extends HexBlock(ValueBlock) {
         const intBuffer = inputView.subarray(inputOffset, inputOffset + inputLength);
         this.valueHexView = new Uint8Array(inputLength);
         for(let i118 = 0; i118 < inputLength; i118++){
-            this.valueHexView[i118] = intBuffer[i118] & 127;
+            this.valueHexView[i118] = intBuffer[i118] & 0x7F;
             this.blockLength++;
-            if ((intBuffer[i118] & 128) === 0) break;
+            if ((intBuffer[i118] & 0x80) === 0x00) break;
         }
         const tempView = new Uint8Array(this.blockLength);
         for(let i210 = 0; i210 < this.blockLength; i210++){
             tempView[i210] = this.valueHexView[i210];
         }
         this.valueHexView = tempView;
-        if ((intBuffer[this.blockLength - 1] & 128) !== 0) {
+        if ((intBuffer[this.blockLength - 1] & 0x80) !== 0x00) {
             this.error = "End of input reached before message was fully decoded";
             return -1;
         }
-        if (this.valueHexView[0] === 0) this.warnings.push("Needlessly long format of SID encoding");
+        if (this.valueHexView[0] === 0x00) this.warnings.push("Needlessly long format of SID encoding");
         if (this.blockLength <= 8) this.valueDec = utilFromBase(this.valueHexView, 7);
         else {
             this.isHexOnly = true;
@@ -26446,7 +26447,7 @@ class LocalSidValueBlock extends HexBlock(ValueBlock) {
         }
         const bytes = new Uint8Array(bits.length / 7);
         for(let i119 = 0; i119 < bytes.length; i119++){
-            bytes[i119] = parseInt(bits.slice(i119 * 7, i119 * 7 + 7), 2) + (i119 + 1 < bytes.length ? 128 : 0);
+            bytes[i119] = parseInt(bits.slice(i119 * 7, i119 * 7 + 7), 2) + (i119 + 1 < bytes.length ? 0x80 : 0);
         }
         this.fromBER(bytes.buffer, 0, bytes.length);
     }
@@ -26455,7 +26456,7 @@ class LocalSidValueBlock extends HexBlock(ValueBlock) {
             if (sizeOnly) return new ArrayBuffer(this.valueHexView.byteLength);
             const curView = this.valueHexView;
             const retView = new Uint8Array(this.blockLength);
-            for(let i120 = 0; i120 < this.blockLength - 1; i120++)retView[i120] = curView[i120] | 128;
+            for(let i120 = 0; i120 < this.blockLength - 1; i120++)retView[i120] = curView[i120] | 0x80;
             retView[this.blockLength - 1] = curView[this.blockLength - 1];
             return retView.buffer;
         }
@@ -26468,7 +26469,7 @@ class LocalSidValueBlock extends HexBlock(ValueBlock) {
         if (!sizeOnly) {
             const encodedView = new Uint8Array(encodedBuf);
             const len = encodedBuf.byteLength - 1;
-            for(let i121 = 0; i121 < len; i121++)retView[i121] = encodedView[i121] | 128;
+            for(let i121 = 0; i121 < len; i121++)retView[i121] = encodedView[i121] | 0x80;
             retView[len] = encodedView[len];
         }
         return retView;
@@ -26657,18 +26658,18 @@ class LocalRelativeSidValueBlock extends HexBlock(LocalBaseBlock) {
         const intBuffer = inputView.subarray(inputOffset, inputOffset + inputLength);
         this.valueHexView = new Uint8Array(inputLength);
         for(let i125 = 0; i125 < inputLength; i125++){
-            this.valueHexView[i125] = intBuffer[i125] & 127;
+            this.valueHexView[i125] = intBuffer[i125] & 0x7F;
             this.blockLength++;
-            if ((intBuffer[i125] & 128) === 0) break;
+            if ((intBuffer[i125] & 0x80) === 0x00) break;
         }
         const tempView = new Uint8Array(this.blockLength);
         for(let i3 = 0; i3 < this.blockLength; i3++)tempView[i3] = this.valueHexView[i3];
         this.valueHexView = tempView;
-        if ((intBuffer[this.blockLength - 1] & 128) !== 0) {
+        if ((intBuffer[this.blockLength - 1] & 0x80) !== 0x00) {
             this.error = "End of input reached before message was fully decoded";
             return -1;
         }
-        if (this.valueHexView[0] === 0) this.warnings.push("Needlessly long format of SID encoding");
+        if (this.valueHexView[0] === 0x00) this.warnings.push("Needlessly long format of SID encoding");
         if (this.blockLength <= 8) this.valueDec = utilFromBase(this.valueHexView, 7);
         else {
             this.isHexOnly = true;
@@ -26681,7 +26682,7 @@ class LocalRelativeSidValueBlock extends HexBlock(LocalBaseBlock) {
             if (sizeOnly) return new ArrayBuffer(this.valueHexView.byteLength);
             const curView = this.valueHexView;
             const retView = new Uint8Array(this.blockLength);
-            for(let i126 = 0; i126 < this.blockLength - 1; i126++)retView[i126] = curView[i126] | 128;
+            for(let i126 = 0; i126 < this.blockLength - 1; i126++)retView[i126] = curView[i126] | 0x80;
             retView[this.blockLength - 1] = curView[this.blockLength - 1];
             return retView.buffer;
         }
@@ -26694,7 +26695,7 @@ class LocalRelativeSidValueBlock extends HexBlock(LocalBaseBlock) {
         if (!sizeOnly) {
             const encodedView = new Uint8Array(encodedBuf);
             const len = encodedBuf.byteLength - 1;
-            for(let i127 = 0; i127 < len; i127++)retView[i127] = encodedView[i127] | 128;
+            for(let i127 = 0; i127 < len; i127++)retView[i127] = encodedView[i127] | 0x80;
             retView[len] = encodedView[len];
         }
         return retView.buffer;
@@ -26939,8 +26940,8 @@ class LocalUniversalStringValueBlock extends LocalSimpleStringBlock {
         for(let i132 = 0; i132 < valueView.length; i132 += 4){
             valueView[i132] = valueView[i132 + 3];
             valueView[i132 + 1] = valueView[i132 + 2];
-            valueView[i132 + 2] = 0;
-            valueView[i132 + 3] = 0;
+            valueView[i132 + 2] = 0x00;
+            valueView[i132 + 3] = 0x00;
         }
         this.valueBlock.value = String.fromCharCode.apply(null, new Uint32Array(copyBuffer));
     }
@@ -27842,30 +27843,30 @@ class ByteStream {
         this.buffer = new ArrayBuffer(stringLength >> 1);
         this.view = new Uint8Array(this.buffer);
         const hexMap = new Map();
-        hexMap.set("0", 0);
-        hexMap.set("1", 1);
-        hexMap.set("2", 2);
-        hexMap.set("3", 3);
-        hexMap.set("4", 4);
-        hexMap.set("5", 5);
-        hexMap.set("6", 6);
-        hexMap.set("7", 7);
-        hexMap.set("8", 8);
-        hexMap.set("9", 9);
-        hexMap.set("A", 10);
-        hexMap.set("a", 10);
-        hexMap.set("B", 11);
-        hexMap.set("b", 11);
-        hexMap.set("C", 12);
-        hexMap.set("c", 12);
-        hexMap.set("D", 13);
-        hexMap.set("d", 13);
-        hexMap.set("E", 14);
-        hexMap.set("e", 14);
-        hexMap.set("F", 15);
-        hexMap.set("f", 15);
+        hexMap.set("0", 0x00);
+        hexMap.set("1", 0x01);
+        hexMap.set("2", 0x02);
+        hexMap.set("3", 0x03);
+        hexMap.set("4", 0x04);
+        hexMap.set("5", 0x05);
+        hexMap.set("6", 0x06);
+        hexMap.set("7", 0x07);
+        hexMap.set("8", 0x08);
+        hexMap.set("9", 0x09);
+        hexMap.set("A", 0x0A);
+        hexMap.set("a", 0x0A);
+        hexMap.set("B", 0x0B);
+        hexMap.set("b", 0x0B);
+        hexMap.set("C", 0x0C);
+        hexMap.set("c", 0x0C);
+        hexMap.set("D", 0x0D);
+        hexMap.set("d", 0x0D);
+        hexMap.set("E", 0x0E);
+        hexMap.set("e", 0x0E);
+        hexMap.set("F", 0x0F);
+        hexMap.set("f", 0x0F);
         let j = 0;
-        let temp = 0;
+        let temp = 0x00;
         for(let i142 = 0; i142 < stringLength; i142++){
             if (!(i142 % 2)) {
                 temp = hexMap.get(hexString.charAt(i142)) << 4;
@@ -28224,7 +28225,7 @@ class ByteStream {
             rightPatterns.splice(0, 1);
             currentPositionLeft = 0;
         }
-        result.sort((a6, b)=>a6.left - b.left
+        result.sort((a21, b)=>a21.left - b.left
         );
         return result;
     }
@@ -28266,7 +28267,7 @@ class ByteStream {
             rightPatterns.splice(0, 1);
             currentPositionLeft = 0;
         }
-        result.sort((a7, b)=>a7.left.position - b.left.position
+        result.sort((a22, b)=>a22.left.position - b.left.position
         );
         return result;
     }
@@ -29181,7 +29182,7 @@ class BitStream {
         if (shift > this.bitsCount) {
             throw new Error("The \"shift\" parameter can not be bigger than \"this.bitsCount\"");
         }
-        const shiftMask = 255 >> 8 - shift;
+        const shiftMask = 0xFF >> 8 - shift;
         this.view[this.view.length - 1] >>= shift;
         for(let i158 = this.view.length - 2; i158 >= 0; i158--){
             this.view[i158 + 1] |= (this.view[i158] & shiftMask) << 8 - shift;
@@ -29205,12 +29206,12 @@ class BitStream {
         if (shift > this.bitsCount) {
             throw new Error("The \"shift\" parameter can not be bigger than \"this.bitsCount\"");
         }
-        const bitsOffset = this.bitsCount & 7;
+        const bitsOffset = this.bitsCount & 0x07;
         if (bitsOffset > shift) {
-            this.view[0] &= 255 >> bitsOffset + shift;
+            this.view[0] &= 0xFF >> bitsOffset + shift;
         } else {
             const view = this.view.slice(1);
-            view[0] &= 255 >> shift - bitsOffset;
+            view[0] &= 0xFF >> shift - bitsOffset;
             this.buffer = view.buffer;
             this.view = view;
         }
@@ -29240,16 +29241,16 @@ class BitStream {
             return new BitStream();
         }
         const startIndex = start >> 3;
-        const startOffset = start & 7;
+        const startOffset = start & 0x07;
         const endIndex = end >> 3;
-        const endOffset = end & 7;
+        const endOffset = end & 0x07;
         const bitsLength = endIndex - startIndex == 0 ? 1 : endIndex - startIndex + 1;
         const result = new BitStream({
             buffer: this.buffer.slice(startIndex, startIndex + bitsLength),
             bitsCount: bitsLength << 3
         });
-        result.view[0] &= 255 >> startOffset;
-        result.view[bitsLength] &= 255 << 7 - endOffset;
+        result.view[0] &= 0xFF >> startOffset;
+        result.view[bitsLength] &= 0xFF << 7 - endOffset;
         if (7 - endOffset) {
             result.shiftRight(7 - endOffset, false);
         }
@@ -29280,11 +29281,11 @@ class BitStream {
     }
     reverseBytes() {
         for(let i159 = 0; i159 < this.view.length; i159++){
-            this.view[i159] = (this.view[i159] * 2050 & 139536 | this.view[i159] * 32800 & 558144) * 65793 >> 16;
+            this.view[i159] = (this.view[i159] * 0x0802 & 0x22110 | this.view[i159] * 0x8020 & 0x88440) * 0x10101 >> 16;
         }
         if (this.bitsCount % 8) {
             const currentLength = (this.bitsCount >> 3) + (this.bitsCount % 8 ? 1 : 0);
-            this.view[this.view.length - currentLength] >>= 8 - (this.bitsCount & 7);
+            this.view[this.view.length - currentLength] >>= 8 - (this.bitsCount & 0x07);
         }
     }
     reverseValue() {
@@ -29297,17 +29298,17 @@ class BitStream {
         this.fromString(reversedValue.join(""));
     }
     getNumberValue() {
-        const byteLength3 = this.view.length - 1;
-        if (byteLength3 > 3) {
+        const byteLength9 = this.view.length - 1;
+        if (byteLength9 > 3) {
             return -1;
         }
-        if (byteLength3 == -1) {
+        if (byteLength9 == -1) {
             return 0;
         }
         const value = new Uint32Array(1);
         const view = new Uint8Array(value.buffer);
-        for(let i161 = byteLength3; i161 >= 0; i161--){
-            view[byteLength3 - i161] = this.view[i161];
+        for(let i161 = byteLength9; i161 >= 0; i161--){
+            view[byteLength9 - i161] = this.view[i161];
         }
         return value[0];
     }
@@ -29507,7 +29508,7 @@ class ArgumentError extends TypeError {
                 return;
             }
         }
-        const typeNames = types3.map((o2)=>o2 instanceof Function && "name" in o2 ? o2.name : `${o2}`
+        const typeNames = types3.map((o24)=>o24 instanceof Function && "name" in o24 ? o24.name : `${o24}`
         );
         throw new ArgumentError(`Parameter '${name}' is not of type ${typeNames.length > 1 ? `(${typeNames.join(" or ")})` : typeNames[0]}`);
     }
@@ -29819,7 +29820,7 @@ class RelativeDistinguishedNames extends PkiObject {
             return new Sequence({
                 value: [
                     new Set1({
-                        value: Array.from(this.typesAndValues, (o3)=>o3.toSchema()
+                        value: Array.from(this.typesAndValues, (o25)=>o25.toSchema()
                         )
                     })
                 ]
@@ -29834,7 +29835,7 @@ class RelativeDistinguishedNames extends PkiObject {
     }
     toJSON() {
         return {
-            typesAndValues: Array.from(this.typesAndValues, (o4)=>o4.toJSON()
+            typesAndValues: Array.from(this.typesAndValues, (o26)=>o26.toJSON()
             )
         };
     }
@@ -30712,13 +30713,13 @@ class AltName extends PkiObject {
     }
     toSchema() {
         return new Sequence({
-            value: Array.from(this.altNames, (o5)=>o5.toSchema()
+            value: Array.from(this.altNames, (o27)=>o27.toSchema()
             )
         });
     }
     toJSON() {
         return {
-            altNames: Array.from(this.altNames, (o6)=>o6.toJSON()
+            altNames: Array.from(this.altNames, (o28)=>o28.toJSON()
             )
         };
     }
@@ -30806,7 +30807,7 @@ class Attribute extends PkiObject {
     toJSON() {
         return {
             type: this.type,
-            values: Array.from(this.values, (o7)=>o7.toJSON()
+            values: Array.from(this.values, (o29)=>o29.toJSON()
             )
         };
     }
@@ -30932,13 +30933,13 @@ class GeneralNames extends PkiObject {
     }
     toSchema() {
         return new Sequence({
-            value: Array.from(this.names, (o8)=>o8.toSchema()
+            value: Array.from(this.names, (o30)=>o30.toSchema()
             )
         });
     }
     toJSON() {
         return {
-            names: Array.from(this.names, (o9)=>o9.toJSON()
+            names: Array.from(this.names, (o31)=>o31.toJSON()
             )
         };
     }
@@ -31074,8 +31075,8 @@ class AuthorityKeyIdentifier extends PkiObject {
         if (KEY_IDENTIFIER$1 in asn1.result) this.keyIdentifier = new OctetString({
             valueHex: asn1.result.keyIdentifier.valueBlock.valueHex
         });
-        if (AUTHORITY_CERT_ISSUER in asn1.result) this.authorityCertIssuer = Array.from(asn1.result.authorityCertIssuer, (o10)=>new GeneralName({
-                schema: o10
+        if (AUTHORITY_CERT_ISSUER in asn1.result) this.authorityCertIssuer = Array.from(asn1.result.authorityCertIssuer, (o32)=>new GeneralName({
+                schema: o32
             })
         );
         if (AUTHORITY_CERT_SERIAL_NUMBER in asn1.result) this.authorityCertSerialNumber = new Integer({
@@ -31099,7 +31100,7 @@ class AuthorityKeyIdentifier extends PkiObject {
                     tagClass: 3,
                     tagNumber: 1
                 },
-                value: Array.from(this.authorityCertIssuer, (o11)=>o11.toSchema()
+                value: Array.from(this.authorityCertIssuer, (o33)=>o33.toSchema()
                 )
             }));
         }
@@ -31122,7 +31123,7 @@ class AuthorityKeyIdentifier extends PkiObject {
             object.keyIdentifier = this.keyIdentifier.toJSON();
         }
         if (this.authorityCertIssuer) {
-            object.authorityCertIssuer = Array.from(this.authorityCertIssuer, (o12)=>o12.toJSON()
+            object.authorityCertIssuer = Array.from(this.authorityCertIssuer, (o34)=>o34.toJSON()
             );
         }
         if (this.authorityCertSerialNumber) {
@@ -31455,7 +31456,7 @@ class PolicyInformation extends PkiObject {
         }));
         if (this.policyQualifiers) {
             outputArray.push(new Sequence({
-                value: Array.from(this.policyQualifiers, (o13)=>o13.toSchema()
+                value: Array.from(this.policyQualifiers, (o35)=>o35.toSchema()
                 )
             }));
         }
@@ -31467,7 +31468,7 @@ class PolicyInformation extends PkiObject {
         const res = {
             policyIdentifier: this.policyIdentifier
         };
-        if (this.policyQualifiers) res.policyQualifiers = Array.from(this.policyQualifiers, (o14)=>o14.toJSON()
+        if (this.policyQualifiers) res.policyQualifiers = Array.from(this.policyQualifiers, (o36)=>o36.toJSON()
         );
         return res;
     }
@@ -31520,13 +31521,13 @@ class CertificatePolicies extends PkiObject {
     }
     toSchema() {
         return new Sequence({
-            value: Array.from(this.certificatePolicies, (o15)=>o15.toSchema()
+            value: Array.from(this.certificatePolicies, (o37)=>o37.toSchema()
             )
         });
     }
     toJSON() {
         return {
-            certificatePolicies: Array.from(this.certificatePolicies, (o16)=>o16.toJSON()
+            certificatePolicies: Array.from(this.certificatePolicies, (o38)=>o38.toJSON()
             )
         };
     }
@@ -31785,7 +31786,7 @@ class DistributionPoint extends PkiObject {
                         tagClass: 3,
                         tagNumber: 0
                     },
-                    value: Array.from(this.distributionPoint, (o17)=>o17.toSchema()
+                    value: Array.from(this.distributionPoint, (o39)=>o39.toSchema()
                     )
                 });
             } else {
@@ -31824,7 +31825,7 @@ class DistributionPoint extends PkiObject {
                     tagClass: 3,
                     tagNumber: 2
                 },
-                value: Array.from(this.cRLIssuer, (o18)=>o18.toSchema()
+                value: Array.from(this.cRLIssuer, (o40)=>o40.toSchema()
                 )
             }));
         }
@@ -31836,7 +31837,7 @@ class DistributionPoint extends PkiObject {
         const object = {};
         if (this.distributionPoint) {
             if (this.distributionPoint instanceof Array) {
-                object.distributionPoint = Array.from(this.distributionPoint, (o19)=>o19.toJSON()
+                object.distributionPoint = Array.from(this.distributionPoint, (o41)=>o41.toJSON()
                 );
             } else {
                 object.distributionPoint = this.distributionPoint.toJSON();
@@ -31846,7 +31847,7 @@ class DistributionPoint extends PkiObject {
             object.reasons = this.reasons.toJSON();
         }
         if (this.cRLIssuer) {
-            object.cRLIssuer = Array.from(this.cRLIssuer, (o20)=>o20.toJSON()
+            object.cRLIssuer = Array.from(this.cRLIssuer, (o42)=>o42.toJSON()
             );
         }
         return object;
@@ -31900,13 +31901,13 @@ class CRLDistributionPoints extends PkiObject {
     }
     toSchema() {
         return new Sequence({
-            value: Array.from(this.distributionPoints, (o21)=>o21.toSchema()
+            value: Array.from(this.distributionPoints, (o43)=>o43.toSchema()
             )
         });
     }
     toJSON() {
         return {
-            distributionPoints: Array.from(this.distributionPoints, (o22)=>o22.toJSON()
+            distributionPoints: Array.from(this.distributionPoints, (o44)=>o44.toJSON()
             )
         };
     }
@@ -32016,13 +32017,13 @@ class InfoAccess extends PkiObject {
     }
     toSchema() {
         return new Sequence({
-            value: Array.from(this.accessDescriptions, (o23)=>o23.toSchema()
+            value: Array.from(this.accessDescriptions, (o45)=>o45.toSchema()
             )
         });
     }
     toJSON() {
         return {
-            accessDescriptions: Array.from(this.accessDescriptions, (o24)=>o24.toJSON()
+            accessDescriptions: Array.from(this.accessDescriptions, (o46)=>o46.toJSON()
             )
         };
     }
@@ -32198,11 +32199,11 @@ class IssuingDistributionPoint extends PkiObject {
         }
         if (ONLY_CONTAINS_USER_CERTS in asn1.result) {
             const view = new Uint8Array(asn1.result.onlyContainsUserCerts.valueBlock.valueHex);
-            this.onlyContainsUserCerts = view[0] !== 0;
+            this.onlyContainsUserCerts = view[0] !== 0x00;
         }
         if (ONLY_CONTAINS_CA_CERTS in asn1.result) {
             const view = new Uint8Array(asn1.result.onlyContainsCACerts.valueBlock.valueHex);
-            this.onlyContainsCACerts = view[0] !== 0;
+            this.onlyContainsCACerts = view[0] !== 0x00;
         }
         if (ONLY_SOME_REASON in asn1.result) {
             const view = new Uint8Array(asn1.result.onlySomeReasons.valueBlock.valueHex);
@@ -32210,11 +32211,11 @@ class IssuingDistributionPoint extends PkiObject {
         }
         if (INDIRECT_CRL in asn1.result) {
             const view = new Uint8Array(asn1.result.indirectCRL.valueBlock.valueHex);
-            this.indirectCRL = view[0] !== 0;
+            this.indirectCRL = view[0] !== 0x00;
         }
         if (ONLY_CONTAINS_ATTRIBUTE_CERTS in asn1.result) {
             const view = new Uint8Array(asn1.result.onlyContainsAttributeCerts.valueBlock.valueHex);
-            this.onlyContainsAttributeCerts = view[0] !== 0;
+            this.onlyContainsAttributeCerts = view[0] !== 0x00;
         }
     }
     toSchema() {
@@ -32227,7 +32228,7 @@ class IssuingDistributionPoint extends PkiObject {
                         tagClass: 3,
                         tagNumber: 0
                     },
-                    value: Array.from(this.distributionPoint, (o25)=>o25.toSchema()
+                    value: Array.from(this.distributionPoint, (o47)=>o47.toSchema()
                     )
                 });
             } else {
@@ -32252,7 +32253,7 @@ class IssuingDistributionPoint extends PkiObject {
                     tagNumber: 1
                 },
                 valueHex: new Uint8Array([
-                    255
+                    0xFF
                 ]).buffer
             }));
         }
@@ -32263,7 +32264,7 @@ class IssuingDistributionPoint extends PkiObject {
                     tagNumber: 2
                 },
                 valueHex: new Uint8Array([
-                    255
+                    0xFF
                 ]).buffer
             }));
         }
@@ -32286,7 +32287,7 @@ class IssuingDistributionPoint extends PkiObject {
                     tagNumber: 4
                 },
                 valueHex: new Uint8Array([
-                    255
+                    0xFF
                 ]).buffer
             }));
         }
@@ -32297,7 +32298,7 @@ class IssuingDistributionPoint extends PkiObject {
                     tagNumber: 5
                 },
                 valueHex: new Uint8Array([
-                    255
+                    0xFF
                 ]).buffer
             }));
         }
@@ -32309,7 +32310,7 @@ class IssuingDistributionPoint extends PkiObject {
         const obj = {};
         if (this.distributionPoint) {
             if (this.distributionPoint instanceof Array) {
-                obj.distributionPoint = Array.from(this.distributionPoint, (o26)=>o26.toJSON()
+                obj.distributionPoint = Array.from(this.distributionPoint, (o48)=>o48.toJSON()
                 );
             } else {
                 obj.distributionPoint = this.distributionPoint.toJSON();
@@ -32582,7 +32583,7 @@ class NameConstraints extends PkiObject {
                     tagClass: 3,
                     tagNumber: 0
                 },
-                value: Array.from(this.permittedSubtrees, (o27)=>o27.toSchema()
+                value: Array.from(this.permittedSubtrees, (o49)=>o49.toSchema()
                 )
             }));
         }
@@ -32592,7 +32593,7 @@ class NameConstraints extends PkiObject {
                     tagClass: 3,
                     tagNumber: 1
                 },
-                value: Array.from(this.excludedSubtrees, (o28)=>o28.toSchema()
+                value: Array.from(this.excludedSubtrees, (o50)=>o50.toSchema()
                 )
             }));
         }
@@ -32603,11 +32604,11 @@ class NameConstraints extends PkiObject {
     toJSON() {
         const object = {};
         if (this.permittedSubtrees) {
-            object.permittedSubtrees = Array.from(this.permittedSubtrees, (o29)=>o29.toJSON()
+            object.permittedSubtrees = Array.from(this.permittedSubtrees, (o51)=>o51.toJSON()
             );
         }
         if (this.excludedSubtrees) {
-            object.excludedSubtrees = Array.from(this.excludedSubtrees, (o30)=>o30.toJSON()
+            object.excludedSubtrees = Array.from(this.excludedSubtrees, (o52)=>o52.toJSON()
             );
         }
         return object;
@@ -32847,13 +32848,13 @@ class PolicyMappings extends PkiObject {
     }
     toSchema() {
         return new Sequence({
-            value: Array.from(this.mappings, (o31)=>o31.toSchema()
+            value: Array.from(this.mappings, (o53)=>o53.toSchema()
             )
         });
     }
     toJSON() {
         return {
-            mappings: Array.from(this.mappings, (o32)=>o32.toJSON()
+            mappings: Array.from(this.mappings, (o54)=>o54.toJSON()
             )
         };
     }
@@ -33115,13 +33116,13 @@ class QCStatements extends PkiObject {
     }
     toSchema() {
         return new Sequence({
-            value: Array.from(this.values, (o33)=>o33.toSchema()
+            value: Array.from(this.values, (o55)=>o55.toSchema()
             )
         });
     }
     toJSON() {
         return {
-            values: Array.from(this.values, (o34)=>o34.toJSON()
+            values: Array.from(this.values, (o56)=>o56.toJSON()
             )
         };
     }
@@ -33193,7 +33194,7 @@ class ECPublicKey extends PkiObject {
     }
     fromSchema(schema1) {
         const view = BufferSourceConverter.toUint8Array(schema1);
-        if (view[0] !== 4) {
+        if (view[0] !== 0x04) {
             throw new Error("Object's schema was not verified against input data for ECPublicKey");
         }
         const namedCurve = ECNamedCurves.find(this.namedCurve);
@@ -33211,7 +33212,7 @@ class ECPublicKey extends PkiObject {
     toSchema() {
         return new RawData({
             data: utilConcatBuf(new Uint8Array([
-                4
+                0x04
             ]).buffer, this.x, this.y)
         });
     }
@@ -33500,8 +33501,8 @@ class PublicKeyInfo extends PkiObject {
             } catch (exception) {
                 throw new Error("Error during initializing object from schema");
             }
-        } catch (e9) {
-            const message = e9 instanceof Error ? e9.message : `${e9}`;
+        } catch (e16) {
+            const message = e16 instanceof Error ? e16.message : `${e16}`;
             throw new Error(`Error during exporting public key: ${message}`);
         }
     }
@@ -33968,7 +33969,7 @@ class RSAPrivateKey extends PkiObject {
         outputArray.push(this.coefficient.convertToDER());
         if (this.otherPrimeInfos) {
             outputArray.push(new Sequence({
-                value: Array.from(this.otherPrimeInfos, (o35)=>o35.toSchema()
+                value: Array.from(this.otherPrimeInfos, (o57)=>o57.toSchema()
                 )
             }));
         }
@@ -33988,7 +33989,7 @@ class RSAPrivateKey extends PkiObject {
             qi: Convert.ToBase64Url(this.coefficient.valueBlock.valueHexView)
         };
         if (this.otherPrimeInfos) {
-            jwk.oth = Array.from(this.otherPrimeInfos, (o36)=>o36.toJSON()
+            jwk.oth = Array.from(this.otherPrimeInfos, (o58)=>o58.toJSON()
             );
         }
         return jwk;
@@ -34165,7 +34166,7 @@ class PrivateKeyInfo extends PkiObject {
                     tagClass: 3,
                     tagNumber: 0
                 },
-                value: Array.from(this.attributes, (o37)=>o37.toSchema()
+                value: Array.from(this.attributes, (o59)=>o59.toSchema()
                 )
             }));
         }
@@ -34181,7 +34182,7 @@ class PrivateKeyInfo extends PkiObject {
                 privateKey: this.privateKey.toJSON()
             };
             if (this.attributes) {
-                object.attributes = Array.from(this.attributes, (o38)=>o38.toJSON()
+                object.attributes = Array.from(this.attributes, (o60)=>o60.toJSON()
                 );
             }
             return object;
@@ -34849,24 +34850,24 @@ class AbstractCryptoEngine {
     }
 }
 async function makePKCS12B2Key(cryptoEngine, hashAlgorithm, keyLength, password, salt, iterationCount) {
-    let u1;
+    let u4;
     let v;
     const result = [];
     switch(hashAlgorithm.toUpperCase()){
         case "SHA-1":
-            u1 = 20;
+            u4 = 20;
             v = 64;
             break;
         case "SHA-256":
-            u1 = 32;
+            u4 = 32;
             v = 64;
             break;
         case "SHA-384":
-            u1 = 48;
+            u4 = 48;
             v = 128;
             break;
         case "SHA-512":
-            u1 = 64;
+            u4 = 64;
             v = 128;
             break;
         default:
@@ -34876,11 +34877,11 @@ async function makePKCS12B2Key(cryptoEngine, hashAlgorithm, keyLength, password,
     const passwordTransformed = new ArrayBuffer(password.byteLength * 2 + 2);
     const passwordTransformedView = new Uint8Array(passwordTransformed);
     for(let i173 = 0; i173 < passwordViewInitial.length; i173++){
-        passwordTransformedView[i173 * 2] = 0;
+        passwordTransformedView[i173 * 2] = 0x00;
         passwordTransformedView[i173 * 2 + 1] = passwordViewInitial[i173];
     }
-    passwordTransformedView[passwordTransformedView.length - 2] = 0;
-    passwordTransformedView[passwordTransformedView.length - 1] = 0;
+    passwordTransformedView[passwordTransformedView.length - 2] = 0x00;
+    passwordTransformedView[passwordTransformedView.length - 1] = 0x00;
     password = passwordTransformed.slice(0);
     const D = new ArrayBuffer(v);
     const dView = new Uint8Array(D);
@@ -34902,7 +34903,7 @@ async function makePKCS12B2Key(cryptoEngine, hashAlgorithm, keyLength, password,
     let iView = new Uint8Array(I);
     iView.set(sView);
     iView.set(pView, sView.length);
-    const c = Math.ceil((keyLength >> 3) / u1);
+    const c = Math.ceil((keyLength >> 3) / u4);
     let internalSequence = Promise.resolve(I);
     for(let i4 = 0; i4 <= c; i4++){
         internalSequence = internalSequence.then((_I)=>{
@@ -34928,11 +34929,11 @@ async function makePKCS12B2Key(cryptoEngine, hashAlgorithm, keyLength, password,
                 const chunk = Array.from(new Uint8Array(I.slice(sliceStart, sliceStart + sliceLength)));
                 sliceStart += v;
                 if (sliceStart + v > I.byteLength) sliceLength = I.byteLength - sliceStart;
-                let x = 511;
+                let x = 0x1ff;
                 for(let l = B.byteLength - 1; l >= 0; l--){
                     x >>= 8;
                     x += bView[l] + chunk[l];
-                    chunk[l] = x & 255;
+                    chunk[l] = x & 0xff;
                 }
                 iRound.push(...chunk);
             }
@@ -35689,9 +35690,9 @@ class CryptoEngine extends AbstractCryptoEngine {
                                 name: "RSASSA-PKCS1-v1_5",
                                 modulusLength: 2048,
                                 publicExponent: new Uint8Array([
-                                    1,
-                                    0,
-                                    1
+                                    0x01,
+                                    0x00,
+                                    0x01
                                 ]),
                                 hash: {
                                     name: "SHA-256"
@@ -35752,9 +35753,9 @@ class CryptoEngine extends AbstractCryptoEngine {
                                 name: "RSA-PSS",
                                 modulusLength: 2048,
                                 publicExponent: new Uint8Array([
-                                    1,
-                                    0,
-                                    1
+                                    0x01,
+                                    0x00,
+                                    0x01
                                 ]),
                                 hash: {
                                     name: "SHA-1"
@@ -35809,9 +35810,9 @@ class CryptoEngine extends AbstractCryptoEngine {
                                 name: "RSA-OAEP",
                                 modulusLength: 2048,
                                 publicExponent: new Uint8Array([
-                                    1,
-                                    0,
-                                    1
+                                    0x01,
+                                    0x00,
+                                    0x01
                                 ]),
                                 hash: {
                                     name: "SHA-256"
@@ -36681,9 +36682,9 @@ async function kdfWithCounter(hashFunction, zBuffer, Counter, SharedInfo, crypto
     if (Counter > 255) throw new ArgumentError("Please set 'Counter' argument to value less or equal to 255");
     const counterBuffer = new ArrayBuffer(4);
     const counterView = new Uint8Array(counterBuffer);
-    counterView[0] = 0;
-    counterView[1] = 0;
-    counterView[2] = 0;
+    counterView[0] = 0x00;
+    counterView[1] = 0x00;
+    counterView[2] = 0x00;
     counterView[3] = Counter;
     let combinedBuffer = EMPTY_BUFFER1;
     combinedBuffer = utilConcatBuf(combinedBuffer, zBuffer);
@@ -36965,8 +36966,8 @@ class SignedCertificateTimestamp extends PkiObject {
         }
         const pki = stringToArrayBuffer(fromBase64(publicKeyBase64));
         const publicKeyInfo = PublicKeyInfo.fromBER(pki);
-        stream.appendChar(0);
-        stream.appendChar(0);
+        stream.appendChar(0x00);
+        stream.appendChar(0x00);
         const timeBuffer = new ArrayBuffer(8);
         const timeView = new Uint8Array(timeBuffer);
         const baseArray = utilToBase(this.timestamp.valueOf(), 8);
@@ -37059,7 +37060,7 @@ class SignedCertificateTimestampList extends PkiObject {
     }
     toJSON() {
         return {
-            timestamps: Array.from(this.timestamps, (o39)=>o39.toJSON()
+            timestamps: Array.from(this.timestamps, (o61)=>o61.toJSON()
             )
         };
     }
@@ -37112,13 +37113,13 @@ class SubjectDirectoryAttributes extends PkiObject {
     }
     toSchema() {
         return new Sequence({
-            value: Array.from(this.attributes, (o40)=>o40.toSchema()
+            value: Array.from(this.attributes, (o62)=>o62.toSchema()
             )
         });
     }
     toJSON() {
         return {
-            attributes: Array.from(this.attributes, (o41)=>o41.toJSON()
+            attributes: Array.from(this.attributes, (o63)=>o63.toJSON()
             )
         };
     }
@@ -37347,13 +37348,13 @@ class Extensions extends PkiObject {
     }
     toSchema() {
         return new Sequence({
-            value: Array.from(this.extensions, (o42)=>o42.toSchema()
+            value: Array.from(this.extensions, (o64)=>o64.toSchema()
             )
         });
     }
     toJSON() {
         return {
-            extensions: this.extensions.map((o43)=>o43.toJSON()
+            extensions: this.extensions.map((o65)=>o65.toJSON()
             )
         };
     }
@@ -37672,7 +37673,7 @@ class AttributeCertificateInfoV1 extends PkiObject {
         result.valueBlock.value.push(this.serialNumber);
         result.valueBlock.value.push(this.attrCertValidityPeriod.toSchema());
         result.valueBlock.value.push(new Sequence({
-            value: Array.from(this.attributes, (o44)=>o44.toSchema()
+            value: Array.from(this.attributes, (o66)=>o66.toSchema()
             )
         }));
         if (this.issuerUniqueID) {
@@ -37697,7 +37698,7 @@ class AttributeCertificateInfoV1 extends PkiObject {
         result.signature = this.signature.toJSON();
         result.serialNumber = this.serialNumber.toJSON();
         result.attrCertValidityPeriod = this.attrCertValidityPeriod.toJSON();
-        result.attributes = Array.from(this.attributes, (o45)=>o45.toJSON()
+        result.attributes = Array.from(this.attributes, (o67)=>o67.toJSON()
         );
         if (this.issuerUniqueID) {
             result.issuerUniqueID = this.issuerUniqueID.toJSON();
@@ -38381,7 +38382,7 @@ class AttributeCertificateInfoV2 extends PkiObject {
                 this.serialNumber,
                 this.attrCertValidityPeriod.toSchema(),
                 new Sequence({
-                    value: Array.from(this.attributes, (o46)=>o46.toSchema()
+                    value: Array.from(this.attributes, (o68)=>o68.toSchema()
                     )
                 })
             ]
@@ -38402,7 +38403,7 @@ class AttributeCertificateInfoV2 extends PkiObject {
             signature: this.signature.toJSON(),
             serialNumber: this.serialNumber.toJSON(),
             attrCertValidityPeriod: this.attrCertValidityPeriod.toJSON(),
-            attributes: Array.from(this.attributes, (o47)=>o47.toJSON()
+            attributes: Array.from(this.attributes, (o69)=>o69.toJSON()
             )
         };
         if (this.issuerUniqueID) {
@@ -39008,7 +39009,7 @@ class Certificate extends PkiObject {
                 },
                 value: [
                     new Sequence({
-                        value: Array.from(this.extensions, (o48)=>o48.toSchema()
+                        value: Array.from(this.extensions, (o70)=>o70.toSchema()
                         )
                     })
                 ]
@@ -39062,7 +39063,7 @@ class Certificate extends PkiObject {
             res.subjectUniqueID = Convert.ToHex(this.subjectUniqueID);
         }
         if (this.extensions) {
-            res.extensions = Array.from(this.extensions, (o49)=>o49.toJSON()
+            res.extensions = Array.from(this.extensions, (o71)=>o71.toJSON()
             );
         }
         return res;
@@ -39579,7 +39580,7 @@ class CertificateRevocationList extends PkiObject {
         }
         if (this.revokedCertificates) {
             outputArray.push(new Sequence({
-                value: Array.from(this.revokedCertificates, (o50)=>o50.toSchema()
+                value: Array.from(this.revokedCertificates, (o72)=>o72.toSchema()
                 )
             }));
         }
@@ -39634,7 +39635,7 @@ class CertificateRevocationList extends PkiObject {
             res.nextUpdate = this.nextUpdate.toJSON();
         }
         if (this.revokedCertificates) {
-            res.revokedCertificates = Array.from(this.revokedCertificates, (o51)=>o51.toJSON()
+            res.revokedCertificates = Array.from(this.revokedCertificates, (o73)=>o73.toJSON()
             );
         }
         if (this.crlExtensions) {
@@ -39918,7 +39919,7 @@ class EncryptedData extends PkiObject {
                     tagClass: 3,
                     tagNumber: 1
                 },
-                value: Array.from(this.unprotectedAttrs, (o52)=>o52.toSchema()
+                value: Array.from(this.unprotectedAttrs, (o74)=>o74.toSchema()
                 )
             }));
         }
@@ -39931,7 +39932,7 @@ class EncryptedData extends PkiObject {
             version: this.version,
             encryptedContentInfo: this.encryptedContentInfo.toJSON()
         };
-        if (this.unprotectedAttrs) res.unprotectedAttrs = Array.from(this.unprotectedAttrs, (o53)=>o53.toJSON()
+        if (this.unprotectedAttrs) res.unprotectedAttrs = Array.from(this.unprotectedAttrs, (o75)=>o75.toJSON()
         );
         return res;
     }
@@ -40314,7 +40315,7 @@ class SafeBag extends PkiObject {
         ];
         if (this.bagAttributes) {
             outputArray.push(new Set1({
-                value: Array.from(this.bagAttributes, (o54)=>o54.toSchema()
+                value: Array.from(this.bagAttributes, (o76)=>o76.toSchema()
                 )
             }));
         }
@@ -40328,7 +40329,7 @@ class SafeBag extends PkiObject {
             bagValue: this.bagValue.toJSON()
         };
         if (this.bagAttributes) {
-            output.bagAttributes = Array.from(this.bagAttributes, (o55)=>o55.toJSON()
+            output.bagAttributes = Array.from(this.bagAttributes, (o77)=>o77.toJSON()
             );
         }
         return output;
@@ -40389,13 +40390,13 @@ class SafeContents extends PkiObject {
     }
     toSchema() {
         return new Sequence({
-            value: Array.from(this.safeBags, (o56)=>o56.toSchema()
+            value: Array.from(this.safeBags, (o78)=>o78.toSchema()
             )
         });
     }
     toJSON() {
         return {
-            safeBags: Array.from(this.safeBags, (o57)=>o57.toJSON()
+            safeBags: Array.from(this.safeBags, (o79)=>o79.toJSON()
             )
         };
     }
@@ -40607,7 +40608,7 @@ class CertificateSet extends PkiObject {
     }
     toJSON() {
         return {
-            certificates: Array.from(this.certificates, (o58)=>o58.toJSON()
+            certificates: Array.from(this.certificates, (o80)=>o80.toJSON()
             )
         };
     }
@@ -40751,7 +40752,7 @@ class RevocationInfoChoices extends PkiObject {
     }
     toSchema() {
         const outputArray = [];
-        outputArray.push(...Array.from(this.crls, (o59)=>o59.toSchema()
+        outputArray.push(...Array.from(this.crls, (o81)=>o81.toSchema()
         ));
         outputArray.push(...Array.from(this.otherRevocationInfos, (element)=>{
             const schema = element.toSchema();
@@ -40765,9 +40766,9 @@ class RevocationInfoChoices extends PkiObject {
     }
     toJSON() {
         return {
-            crls: Array.from(this.crls, (o60)=>o60.toJSON()
+            crls: Array.from(this.crls, (o82)=>o82.toJSON()
             ),
-            otherRevocationInfos: Array.from(this.otherRevocationInfos, (o61)=>o61.toJSON()
+            otherRevocationInfos: Array.from(this.otherRevocationInfos, (o83)=>o83.toJSON()
             )
         };
     }
@@ -41858,13 +41859,13 @@ class RecipientEncryptedKeys extends PkiObject {
     }
     toSchema() {
         return new Sequence({
-            value: Array.from(this.encryptedKeys, (o62)=>o62.toSchema()
+            value: Array.from(this.encryptedKeys, (o84)=>o84.toSchema()
             )
         });
     }
     toJSON() {
         return {
-            encryptedKeys: Array.from(this.encryptedKeys, (o63)=>o63.toJSON()
+            encryptedKeys: Array.from(this.encryptedKeys, (o85)=>o85.toJSON()
             )
         };
     }
@@ -42701,26 +42702,26 @@ class RSAESOAEPParams extends PkiObject {
                     algorithmId: "1.2.840.113549.1.1.9",
                     algorithmParams: new OctetString({
                         valueHex: new Uint8Array([
-                            218,
-                            57,
-                            163,
-                            238,
-                            94,
-                            107,
-                            75,
-                            13,
-                            50,
-                            85,
-                            191,
-                            239,
-                            149,
-                            96,
-                            24,
-                            144,
-                            175,
-                            216,
-                            7,
-                            9
+                            0xda,
+                            0x39,
+                            0xa3,
+                            0xee,
+                            0x5e,
+                            0x6b,
+                            0x4b,
+                            0x0d,
+                            0x32,
+                            0x55,
+                            0xbf,
+                            0xef,
+                            0x95,
+                            0x60,
+                            0x18,
+                            0x90,
+                            0xaf,
+                            0xd8,
+                            0x07,
+                            0x09
                         ]).buffer
                     })
                 });
@@ -43117,15 +43118,15 @@ class EnvelopedData extends PkiObject {
                 })
             });
         }
-        this.recipientInfos = Array.from(asn1.result.recipientInfos, (o64)=>new RecipientInfo({
-                schema: o64
+        this.recipientInfos = Array.from(asn1.result.recipientInfos, (o86)=>new RecipientInfo({
+                schema: o86
             })
         );
         this.encryptedContentInfo = new EncryptedContentInfo({
             schema: asn1.result.encryptedContentInfo
         });
-        if (UNPROTECTED_ATTRS in asn1.result) this.unprotectedAttrs = Array.from(asn1.result.unprotectedAttrs, (o65)=>new Attribute({
-                schema: o65
+        if (UNPROTECTED_ATTRS in asn1.result) this.unprotectedAttrs = Array.from(asn1.result.unprotectedAttrs, (o87)=>new Attribute({
+                schema: o87
             })
         );
     }
@@ -43145,7 +43146,7 @@ class EnvelopedData extends PkiObject {
             }));
         }
         outputArray.push(new Set1({
-            value: Array.from(this.recipientInfos, (o66)=>o66.toSchema()
+            value: Array.from(this.recipientInfos, (o88)=>o88.toSchema()
             )
         }));
         outputArray.push(this.encryptedContentInfo.toSchema());
@@ -43156,7 +43157,7 @@ class EnvelopedData extends PkiObject {
                     tagClass: 3,
                     tagNumber: 1
                 },
-                value: Array.from(this.unprotectedAttrs, (o67)=>o67.toSchema()
+                value: Array.from(this.unprotectedAttrs, (o89)=>o89.toSchema()
                 )
             }));
         }
@@ -43167,12 +43168,12 @@ class EnvelopedData extends PkiObject {
     toJSON() {
         const res = {
             version: this.version,
-            recipientInfos: Array.from(this.recipientInfos, (o68)=>o68.toJSON()
+            recipientInfos: Array.from(this.recipientInfos, (o90)=>o90.toJSON()
             ),
             encryptedContentInfo: this.encryptedContentInfo.toJSON()
         };
         if (this.originatorInfo) res.originatorInfo = this.originatorInfo.toJSON();
-        if (this.unprotectedAttrs) res.unprotectedAttrs = Array.from(this.unprotectedAttrs, (o69)=>o69.toJSON()
+        if (this.unprotectedAttrs) res.unprotectedAttrs = Array.from(this.unprotectedAttrs, (o91)=>o91.toJSON()
         );
         return res;
     }
@@ -43910,13 +43911,13 @@ class AuthenticatedSafe extends PkiObject {
     }
     toSchema() {
         return new Sequence({
-            value: Array.from(this.safeContents, (o70)=>o70.toSchema()
+            value: Array.from(this.safeContents, (o92)=>o92.toSchema()
             )
         });
     }
     toJSON() {
         return {
-            safeContents: Array.from(this.safeContents, (o71)=>o71.toJSON()
+            safeContents: Array.from(this.safeContents, (o93)=>o93.toJSON()
             )
         };
     }
@@ -44396,7 +44397,7 @@ class SingleResponse extends PkiObject {
         }
         if (this.singleExtensions) {
             outputArray.push(new Sequence({
-                value: Array.from(this.singleExtensions, (o72)=>o72.toSchema()
+                value: Array.from(this.singleExtensions, (o94)=>o94.toSchema()
                 )
             }));
         }
@@ -44414,7 +44415,7 @@ class SingleResponse extends PkiObject {
             res.nextUpdate = this.nextUpdate;
         }
         if (this.singleExtensions) {
-            res.singleExtensions = Array.from(this.singleExtensions, (o73)=>o73.toJSON()
+            res.singleExtensions = Array.from(this.singleExtensions, (o95)=>o95.toJSON()
             );
         }
         return res;
@@ -44640,7 +44641,7 @@ class ResponseData extends PkiObject {
                 valueDate: this.producedAt
             }));
             outputArray.push(new Sequence({
-                value: Array.from(this.responses, (o74)=>o74.toSchema()
+                value: Array.from(this.responses, (o96)=>o96.toSchema()
                 )
             }));
             if (this.responseExtensions) {
@@ -44651,7 +44652,7 @@ class ResponseData extends PkiObject {
                     },
                     value: [
                         new Sequence({
-                            value: Array.from(this.responseExtensions, (o75)=>o75.toSchema()
+                            value: Array.from(this.responseExtensions, (o97)=>o97.toSchema()
                             )
                         })
                     ]
@@ -44675,11 +44676,11 @@ class ResponseData extends PkiObject {
             res.producedAt = this.producedAt;
         }
         if (this.responses) {
-            res.responses = Array.from(this.responses, (o76)=>o76.toJSON()
+            res.responses = Array.from(this.responses, (o98)=>o98.toJSON()
             );
         }
         if (this.responseExtensions) {
-            res.responseExtensions = Array.from(this.responseExtensions, (o77)=>o77.toJSON()
+            res.responseExtensions = Array.from(this.responseExtensions, (o99)=>o99.toJSON()
             );
         }
         return res;
@@ -44866,7 +44867,7 @@ class CertificateChainValidationEngine {
                     statusMessage: "No certificate's issuers"
                 };
             }
-            crls.push(...this.crls.filter((o78)=>o78.issuer.isEqual(certificate.issuer)
+            crls.push(...this.crls.filter((o100)=>o100.issuer.isEqual(certificate.issuer)
             ));
             if (crls.length === 0) {
                 return {
@@ -44942,8 +44943,8 @@ class CertificateChainValidationEngine {
                     if (extension.extnID === id_KeyUsage) {
                         keyUsagePresent = true;
                         const view = new Uint8Array(extension.parsedValue.valueBlock.valueHex);
-                        if ((view[0] & 4) === 4) mustBeCA = true;
-                        if ((view[0] & 2) === 2) cRLSign = true;
+                        if ((view[0] & 0x04) === 0x04) mustBeCA = true;
+                        if ((view[0] & 0x02) === 0x02) cRLSign = true;
                     }
                     if (extension.extnID === id_BasicConstraints) {
                         if ("cA" in extension.parsedValue) {
@@ -45336,18 +45337,18 @@ class CertificateChainValidationEngine {
                         const extension = cert.extensions[j];
                         if (extension.extnID === id_CertificatePolicies) {
                             certPolicies[i188] = extension.parsedValue;
-                            for(let s10 = 0; s10 < allPolicies.length; s10++){
-                                if (allPolicies[s10] === id_AnyPolicy) {
-                                    delete policiesAndCerts[s10][i188];
+                            for(let s13 = 0; s13 < allPolicies.length; s13++){
+                                if (allPolicies[s13] === id_AnyPolicy) {
+                                    delete policiesAndCerts[s13][i188];
                                     break;
                                 }
                             }
                             for(let k = 0; k < extension.parsedValue.certificatePolicies.length; k++){
                                 let policyIndex = -1;
                                 const policyId = extension.parsedValue.certificatePolicies[k].policyIdentifier;
-                                for(let s11 = 0; s11 < allPolicies.length; s11++){
-                                    if (policyId === allPolicies[s11]) {
-                                        policyIndex = s11;
+                                for(let s14 = 0; s14 < allPolicies.length; s14++){
+                                    if (policyId === allPolicies[s14]) {
+                                        policyIndex = s14;
                                         break;
                                     }
                                 }
@@ -45453,9 +45454,9 @@ class CertificateChainValidationEngine {
                         }
                         let issuerDomainPolicyIndex = -1;
                         let subjectDomainPolicyIndex = -1;
-                        for(let n10 = 0; n10 < allPolicies.length; n10++){
-                            if (allPolicies[n10] === policyMappings[i14 + 1].mappings[k].issuerDomainPolicy) issuerDomainPolicyIndex = n10;
-                            if (allPolicies[n10] === policyMappings[i14 + 1].mappings[k].subjectDomainPolicy) subjectDomainPolicyIndex = n10;
+                        for(let n13 = 0; n13 < allPolicies.length; n13++){
+                            if (allPolicies[n13] === policyMappings[i14 + 1].mappings[k].issuerDomainPolicy) issuerDomainPolicyIndex = n13;
+                            if (allPolicies[n13] === policyMappings[i14 + 1].mappings[k].subjectDomainPolicy) subjectDomainPolicyIndex = n13;
                         }
                         if (typeof policiesAndCerts[issuerDomainPolicyIndex][i14] !== "undefined") delete policiesAndCerts[issuerDomainPolicyIndex][i14];
                         for(let j = 0; j < certPolicies[i14].certificatePolicies.length; j++){
@@ -45867,7 +45868,7 @@ class BasicOCSPResponse extends PkiObject {
                 },
                 value: [
                     new Sequence({
-                        value: Array.from(this.certs, (o79)=>o79.toSchema()
+                        value: Array.from(this.certs, (o101)=>o101.toSchema()
                         )
                     })
                 ]
@@ -45884,7 +45885,7 @@ class BasicOCSPResponse extends PkiObject {
             signature: this.signature.toJSON()
         };
         if (this.certs) {
-            res.certs = Array.from(this.certs, (o80)=>o80.toJSON()
+            res.certs = Array.from(this.certs, (o102)=>o102.toJSON()
             );
         }
         return res;
@@ -46163,7 +46164,7 @@ class CertificationRequest extends PkiObject {
                     tagClass: 3,
                     tagNumber: 0
                 },
-                value: Array.from(this.attributes || [], (o81)=>o81.toSchema()
+                value: Array.from(this.attributes || [], (o103)=>o103.toSchema()
                 )
             }));
         }
@@ -46201,7 +46202,7 @@ class CertificationRequest extends PkiObject {
             signatureValue: this.signatureValue.toJSON()
         };
         if (ATTRIBUTES$1 in this) {
-            object.attributes = Array.from(this.attributes || [], (o82)=>o82.toJSON()
+            object.attributes = Array.from(this.attributes || [], (o104)=>o104.toJSON()
             );
         }
         return object;
@@ -46755,7 +46756,7 @@ class Request extends PkiObject {
                 },
                 value: [
                     new Sequence({
-                        value: Array.from(this.singleRequestExtensions, (o83)=>o83.toSchema()
+                        value: Array.from(this.singleRequestExtensions, (o105)=>o105.toSchema()
                         )
                     })
                 ]
@@ -46770,7 +46771,7 @@ class Request extends PkiObject {
             reqCert: this.reqCert.toJSON()
         };
         if (this.singleRequestExtensions) {
-            res.singleRequestExtensions = Array.from(this.singleRequestExtensions, (o84)=>o84.toJSON()
+            res.singleRequestExtensions = Array.from(this.singleRequestExtensions, (o106)=>o106.toJSON()
             );
         }
         return res;
@@ -46960,7 +46961,7 @@ class TBSRequest extends PkiObject {
                 }));
             }
             outputArray.push(new Sequence({
-                value: Array.from(this.requestList, (o85)=>o85.toSchema()
+                value: Array.from(this.requestList, (o107)=>o107.toSchema()
                 )
             }));
             if (this.requestExtensions) {
@@ -46971,7 +46972,7 @@ class TBSRequest extends PkiObject {
                     },
                     value: [
                         new Sequence({
-                            value: Array.from(this.requestExtensions, (o86)=>o86.toSchema()
+                            value: Array.from(this.requestExtensions, (o108)=>o108.toSchema()
                             )
                         })
                     ]
@@ -46989,10 +46990,10 @@ class TBSRequest extends PkiObject {
         if (this.requestorName) {
             res.requestorName = this.requestorName.toJSON();
         }
-        res.requestList = Array.from(this.requestList, (o87)=>o87.toJSON()
+        res.requestList = Array.from(this.requestList, (o109)=>o109.toJSON()
         );
         if (this.requestExtensions) {
-            res.requestExtensions = Array.from(this.requestExtensions, (o88)=>o88.toJSON()
+            res.requestExtensions = Array.from(this.requestExtensions, (o110)=>o110.toJSON()
             );
         }
         return res;
@@ -47107,7 +47108,7 @@ class Signature extends PkiObject {
                 },
                 value: [
                     new Sequence({
-                        value: Array.from(this.certs, (o89)=>o89.toSchema()
+                        value: Array.from(this.certs, (o111)=>o111.toSchema()
                         )
                     })
                 ]
@@ -47123,7 +47124,7 @@ class Signature extends PkiObject {
             signature: this.signature.toJSON()
         };
         if (this.certs) {
-            res.certs = Array.from(this.certs, (o90)=>o90.toJSON()
+            res.certs = Array.from(this.certs, (o112)=>o112.toJSON()
             );
         }
         return res;
@@ -47544,7 +47545,7 @@ class SignedAndUnsignedAttributes extends PkiObject {
         this.type = asn1.result.idBlock.tagNumber;
         this.encodedValue = BufferSourceConverter.toArrayBuffer(asn1.result.valueBeforeDecodeView);
         const encodedView = new Uint8Array(this.encodedValue);
-        encodedView[0] = 49;
+        encodedView[0] = 0x31;
         if (ATTRIBUTES in asn1.result === false) {
             if (this.type === 0) throw new Error("Wrong structure of SignedUnsignedAttributes");
             else return;
@@ -47562,7 +47563,7 @@ class SignedAndUnsignedAttributes extends PkiObject {
                 tagClass: 3,
                 tagNumber: this.type
             },
-            value: Array.from(this.attributes, (o91)=>o91.toSchema()
+            value: Array.from(this.attributes, (o113)=>o113.toSchema()
             )
         });
     }
@@ -47570,7 +47571,7 @@ class SignedAndUnsignedAttributes extends PkiObject {
         if (SignedAndUnsignedAttributes.compareWithDefault(TYPE, this.type) || SignedAndUnsignedAttributes.compareWithDefault(ATTRIBUTES, this.attributes)) throw new Error("Incorrectly initialized \"SignedAndUnsignedAttributes\" class");
         return {
             type: this.type,
-            attributes: Array.from(this.attributes, (o92)=>o92.toJSON()
+            attributes: Array.from(this.attributes, (o114)=>o114.toJSON()
             )
         };
     }
@@ -48033,7 +48034,7 @@ class TSTInfo extends PkiObject {
                     tagClass: 3,
                     tagNumber: 1
                 },
-                value: Array.from(this.extensions, (o93)=>o93.toSchema()
+                value: Array.from(this.extensions, (o115)=>o115.toSchema()
                 )
             }));
         }
@@ -48053,7 +48054,7 @@ class TSTInfo extends PkiObject {
         if (this.ordering !== undefined) res.ordering = this.ordering;
         if (this.nonce) res.nonce = this.nonce.toJSON();
         if (this.tsa) res.tsa = this.tsa.toJSON();
-        if (this.extensions) res.extensions = Array.from(this.extensions, (o94)=>o94.toJSON()
+        if (this.extensions) res.extensions = Array.from(this.extensions, (o116)=>o116.toJSON()
         );
         return res;
     }
@@ -48260,15 +48261,15 @@ class SignedData extends PkiObject {
     }
     toSchema(encodeFlag = false) {
         const outputArray = [];
-        if (this.certificates && this.certificates.length && this.certificates.some((o95)=>o95 instanceof OtherCertificateFormat
-        ) || this.crls && this.crls.length && this.crls.some((o96)=>o96 instanceof OtherRevocationInfoFormat
+        if (this.certificates && this.certificates.length && this.certificates.some((o117)=>o117 instanceof OtherCertificateFormat
+        ) || this.crls && this.crls.length && this.crls.some((o118)=>o118 instanceof OtherRevocationInfoFormat
         )) {
             this.version = 5;
-        } else if (this.certificates && this.certificates.length && this.certificates.some((o97)=>o97 instanceof AttributeCertificateV2
+        } else if (this.certificates && this.certificates.length && this.certificates.some((o119)=>o119 instanceof AttributeCertificateV2
         )) {
             this.version = 4;
-        } else if (this.certificates && this.certificates.length && this.certificates.some((o98)=>o98 instanceof AttributeCertificateV1
-        ) || this.signerInfos.some((o99)=>o99.version === 3
+        } else if (this.certificates && this.certificates.length && this.certificates.some((o120)=>o120 instanceof AttributeCertificateV1
+        ) || this.signerInfos.some((o121)=>o121.version === 3
         ) || this.encapContentInfo.eContentType !== SignedData.ID_DATA) {
             this.version = 3;
         } else {
@@ -48472,11 +48473,11 @@ class SignedData extends PkiObject {
                 }
                 const verificationResult = await chainEngine.verify({
                     passedWhenNotRevValues
-                }, crypto).catch((e10)=>{
+                }, crypto).catch((e17)=>{
                     throw new SignedDataVerifyError({
                         date: checkDate,
                         code: 5,
-                        message: `Validation of signer's certificate failed with error: ${e10 instanceof Object ? e10.resultMessage : e10}`,
+                        message: `Validation of signer's certificate failed with error: ${e17 instanceof Object ? e17.resultMessage : e17}`,
                         signerCertificate: signerCert,
                         signerCertificateVerified: false
                     });
@@ -48580,14 +48581,14 @@ class SignedData extends PkiObject {
             } else {
                 return verifyResult;
             }
-        } catch (e11) {
-            if (e11 instanceof SignedDataVerifyError) {
-                throw e11;
+        } catch (e18) {
+            if (e18 instanceof SignedDataVerifyError) {
+                throw e18;
             }
             throw new SignedDataVerifyError({
                 date: checkDate,
                 code: 15,
-                message: `Error during verification: ${e11 instanceof Error ? e11.message : e11}`,
+                message: `Error during verification: ${e18 instanceof Error ? e18.message : e18}`,
                 signatureVerified: null,
                 signerCertificate: signerCert,
                 timestampSerial,
@@ -48623,7 +48624,7 @@ class SignedData extends PkiObject {
             else {
                 data = signerInfo.signedAttrs.toSchema().toBER();
                 const view = BufferSourceConverter.toUint8Array(data);
-                view[0] = 49;
+                view[0] = 0x31;
             }
         } else {
             const eContent = this.encapContentInfo.eContent;
@@ -49063,7 +49064,7 @@ class PKIStatusInfo extends PkiObject {
             status: this.status
         };
         if (this.statusStrings) {
-            res.statusStrings = Array.from(this.statusStrings, (o100)=>o100.toJSON()
+            res.statusStrings = Array.from(this.statusStrings, (o122)=>o122.toJSON()
             );
         }
         if (this.failInfo) {
@@ -49225,7 +49226,7 @@ class TimeStampReq extends PkiObject {
                     tagClass: 3,
                     tagNumber: 0
                 },
-                value: Array.from(this.extensions, (o101)=>o101.toSchema()
+                value: Array.from(this.extensions, (o123)=>o123.toSchema()
                 )
             }));
         }
@@ -49242,7 +49243,7 @@ class TimeStampReq extends PkiObject {
         if (this.nonce !== undefined) res.nonce = this.nonce.toJSON();
         if (this.certReq !== undefined && TimeStampReq.compareWithDefault(CERT_REQ, this.certReq) === false) res.certReq = this.certReq;
         if (this.extensions) {
-            res.extensions = Array.from(this.extensions, (o102)=>o102.toJSON()
+            res.extensions = Array.from(this.extensions, (o124)=>o124.toJSON()
             );
         }
         return res;
@@ -49443,18 +49444,18 @@ class Decoder {
     }
     encodeKeys(rec) {
         if (!this._keyMap) return rec;
-        let map2 = new Map();
-        for (let [k, v] of Object.entries(rec))map2.set(this._keyMap.hasOwnProperty(k) ? this._keyMap[k] : k, v);
-        return map2;
+        let map4 = new Map();
+        for (let [k, v] of Object.entries(rec))map4.set(this._keyMap.hasOwnProperty(k) ? this._keyMap[k] : k, v);
+        return map4;
     }
-    decodeKeys(map3) {
-        if (!this._keyMap || map3.constructor.name != 'Map') return map3;
+    decodeKeys(map5) {
+        if (!this._keyMap || map5.constructor.name != 'Map') return map5;
         if (!this._mapKey) {
             this._mapKey = new Map();
             for (let [k, v] of Object.entries(this._keyMap))this._mapKey.set(v, k);
         }
         let res = {};
-        map3.forEach((v, k)=>res[this._mapKey.has(k) ? this._mapKey.get(k) : k] = v
+        map5.forEach((v, k)=>res[this._mapKey.has(k) ? this._mapKey.get(k) : k] = v
         );
         return res;
     }
@@ -49463,7 +49464,7 @@ class Decoder {
         if (this._keyMap) {
             switch(res.constructor.name){
                 case 'Array':
-                    return res.map((r3)=>this.decodeKeys(r3)
+                    return res.map((r8)=>this.decodeKeys(r8)
                     );
             }
         }
@@ -49570,24 +49571,24 @@ function checkedRead() {
 function read() {
     let token = src[position++];
     let majorType = token >> 5;
-    token = token & 31;
-    if (token > 23) {
+    token = token & 0x1f;
+    if (token > 0x17) {
         switch(token){
-            case 24:
+            case 0x18:
                 token = src[position++];
                 break;
-            case 25:
+            case 0x19:
                 if (majorType == 7) {
                     return getFloat16();
                 }
                 token = dataView.getUint16(position);
                 position += 2;
                 break;
-            case 26:
+            case 0x1a:
                 if (majorType == 7) {
                     let value = dataView.getFloat32(position);
                     if (currentDecoder.useFloat32 > 2) {
-                        let multiplier = mult10[(src[position] & 127) << 1 | src[position + 1] >> 7];
+                        let multiplier = mult10[(src[position] & 0x7f) << 1 | src[position + 1] >> 7];
                         position += 4;
                         return (multiplier * value + (value > 0 ? 0.5 : -0.5) >> 0) / multiplier;
                     }
@@ -49597,7 +49598,7 @@ function read() {
                 token = dataView.getUint32(position);
                 position += 4;
                 break;
-            case 27:
+            case 0x1b:
                 if (majorType == 7) {
                     let value = dataView.getFloat64(position);
                     position += 8;
@@ -49607,12 +49608,12 @@ function read() {
                     if (dataView.getUint32(position) > 0) throw new Error('JavaScript does not support arrays, maps, or strings with length over 4294967295');
                     token = dataView.getUint32(position + 4);
                 } else if (currentDecoder.int64AsNumber) {
-                    token = dataView.getUint32(position) * 4294967296;
+                    token = dataView.getUint32(position) * 0x100000000;
                     token += dataView.getUint32(position + 4);
                 } else token = dataView.getBigUint64(position);
                 position += 8;
                 break;
-            case 31:
+            case 0x1f:
                 switch(majorType){
                     case 2:
                     case 3:
@@ -49636,10 +49637,10 @@ function read() {
                                 currentDecoder.mapsAsObjects = true;
                                 restoreMapsAsObject = false;
                             }
-                            let map4 = new Map();
-                            if (currentDecoder.keyMap) while((key = read()) != STOP_CODE)map4.set(currentDecoder.decodeKey(key), read());
-                            else while((key = read()) != STOP_CODE)map4.set(key, read());
-                            return map4;
+                            let map6 = new Map();
+                            if (currentDecoder.keyMap) while((key = read()) != STOP_CODE)map6.set(currentDecoder.decodeKey(key), read());
+                            else while((key = read()) != STOP_CODE)map6.set(key, read());
+                            return map6;
                         }
                     case 7:
                         return STOP_CODE;
@@ -49681,21 +49682,21 @@ function read() {
                     currentDecoder.mapsAsObjects = true;
                     restoreMapsAsObject = false;
                 }
-                let map5 = new Map();
-                if (currentDecoder.keyMap) for(let i7 = 0; i7 < token; i7++)map5.set(currentDecoder.decodeKey(read()), read());
-                else for(let i6 = 0; i6 < token; i6++)map5.set(read(), read());
-                return map5;
+                let map7 = new Map();
+                if (currentDecoder.keyMap) for(let i7 = 0; i7 < token; i7++)map7.set(currentDecoder.decodeKey(read()), read());
+                else for(let i6 = 0; i6 < token; i6++)map7.set(read(), read());
+                return map7;
             }
         case 6:
-            if (token >= 57337) {
-                let structure = currentStructures[token & 8191];
+            if (token >= 0xdff9) {
+                let structure = currentStructures[token & 0x1fff];
                 if (structure) {
                     if (!structure.read) structure.read = createStructureReader(structure);
                     return structure.read();
                 }
-                if (token < 65536) {
-                    if (token == 57343) return recordDefinition(read());
-                    else if (token == 57342) {
+                if (token < 0x10000) {
+                    if (token == 0xdfff) return recordDefinition(read());
+                    else if (token == 0xdffe) {
                         let length = readJustLength();
                         let id = read();
                         for(let i8 = 2; i8 < length; i8++){
@@ -49705,12 +49706,12 @@ function read() {
                             ]);
                         }
                         return read();
-                    } else if (token == 57337) {
+                    } else if (token == 0xdff9) {
                         return readBundleExt();
                     }
                     if (currentDecoder.getShared) {
                         loadShared();
-                        structure = currentStructures[token & 8191];
+                        structure = currentStructures[token & 0x1fff];
                         if (structure) {
                             if (!structure.read) structure.read = createStructureReader(structure);
                             return structure.read();
@@ -49732,15 +49733,15 @@ function read() {
             }
         case 7:
             switch(token){
-                case 20:
+                case 0x14:
                     return false;
-                case 21:
+                case 0x15:
                     return true;
-                case 22:
+                case 0x16:
                     return null;
-                case 23:
+                case 0x17:
                     return;
-                case 31:
+                case 0x1f:
                 default:
                     let packedValue = (packedValues || getPackedValues())[token];
                     if (packedValue !== undefined) return packedValue;
@@ -49759,17 +49760,17 @@ const validName = /^[a-zA-Z_$][a-zA-Z\d_$]*$/;
 function createStructureReader(structure) {
     function readObject() {
         let length = src[position++];
-        length = length & 31;
-        if (length > 23) {
+        length = length & 0x1f;
+        if (length > 0x17) {
             switch(length){
-                case 24:
+                case 0x18:
                     length = src[position++];
                     break;
-                case 25:
+                case 0x19:
                     length = dataView.getUint16(position);
                     position += 2;
                     break;
-                case 26:
+                case 0x1a:
                     length = dataView.getUint32(position);
                     position += 4;
                     break;
@@ -49814,30 +49815,30 @@ function readStringJS(length) {
     result = '';
     while(position < end){
         const byte1 = src[position++];
-        if ((byte1 & 128) === 0) {
+        if ((byte1 & 0x80) === 0) {
             units.push(byte1);
-        } else if ((byte1 & 224) === 192) {
-            const byte2 = src[position++] & 63;
-            units.push((byte1 & 31) << 6 | byte2);
-        } else if ((byte1 & 240) === 224) {
-            const byte2 = src[position++] & 63;
-            const byte3 = src[position++] & 63;
-            units.push((byte1 & 31) << 12 | byte2 << 6 | byte3);
-        } else if ((byte1 & 248) === 240) {
-            const byte2 = src[position++] & 63;
-            const byte3 = src[position++] & 63;
-            const byte4 = src[position++] & 63;
-            let unit = (byte1 & 7) << 18 | byte2 << 12 | byte3 << 6 | byte4;
-            if (unit > 65535) {
-                unit -= 65536;
-                units.push(unit >>> 10 & 1023 | 55296);
-                unit = 56320 | unit & 1023;
+        } else if ((byte1 & 0xe0) === 0xc0) {
+            const byte2 = src[position++] & 0x3f;
+            units.push((byte1 & 0x1f) << 6 | byte2);
+        } else if ((byte1 & 0xf0) === 0xe0) {
+            const byte2 = src[position++] & 0x3f;
+            const byte3 = src[position++] & 0x3f;
+            units.push((byte1 & 0x1f) << 12 | byte2 << 6 | byte3);
+        } else if ((byte1 & 0xf8) === 0xf0) {
+            const byte2 = src[position++] & 0x3f;
+            const byte3 = src[position++] & 0x3f;
+            const byte4 = src[position++] & 0x3f;
+            let unit = (byte1 & 0x07) << 0x12 | byte2 << 0x0c | byte3 << 0x06 | byte4;
+            if (unit > 0xffff) {
+                unit -= 0x10000;
+                units.push(unit >>> 10 & 0x3ff | 0xd800);
+                unit = 0xdc00 | unit & 0x3ff;
             }
             units.push(unit);
         } else {
             units.push(byte1);
         }
-        if (units.length >= 4096) {
+        if (units.length >= 0x1000) {
             result += fromCharCode.apply(String, units);
             units.length = 0;
         }
@@ -49853,7 +49854,7 @@ function longStringInJS(length) {
     let bytes = new Array(length);
     for(let i12 = 0; i12 < length; i12++){
         const __byte = src[position++];
-        if ((__byte & 128) > 0) {
+        if ((__byte & 0x80) > 0) {
             position = start;
             return;
         }
@@ -49866,127 +49867,127 @@ function shortStringInJS(length) {
         if (length < 2) {
             if (length === 0) return '';
             else {
-                let a8 = src[position++];
-                if ((a8 & 128) > 1) {
+                let a23 = src[position++];
+                if ((a23 & 0x80) > 1) {
                     position -= 1;
                     return;
                 }
-                return fromCharCode(a8);
+                return fromCharCode(a23);
             }
         } else {
-            let a9 = src[position++];
+            let a24 = src[position++];
             let b = src[position++];
-            if ((a9 & 128) > 0 || (b & 128) > 0) {
+            if ((a24 & 0x80) > 0 || (b & 0x80) > 0) {
                 position -= 2;
                 return;
             }
-            if (length < 3) return fromCharCode(a9, b);
+            if (length < 3) return fromCharCode(a24, b);
             let c = src[position++];
-            if ((c & 128) > 0) {
+            if ((c & 0x80) > 0) {
                 position -= 3;
                 return;
             }
-            return fromCharCode(a9, b, c);
+            return fromCharCode(a24, b, c);
         }
     } else {
-        let a10 = src[position++];
+        let a25 = src[position++];
         let b = src[position++];
         let c = src[position++];
         let d = src[position++];
-        if ((a10 & 128) > 0 || (b & 128) > 0 || (c & 128) > 0 || (d & 128) > 0) {
+        if ((a25 & 0x80) > 0 || (b & 0x80) > 0 || (c & 0x80) > 0 || (d & 0x80) > 0) {
             position -= 4;
             return;
         }
         if (length < 6) {
-            if (length === 4) return fromCharCode(a10, b, c, d);
+            if (length === 4) return fromCharCode(a25, b, c, d);
             else {
-                let e12 = src[position++];
-                if ((e12 & 128) > 0) {
+                let e19 = src[position++];
+                if ((e19 & 0x80) > 0) {
                     position -= 5;
                     return;
                 }
-                return fromCharCode(a10, b, c, d, e12);
+                return fromCharCode(a25, b, c, d, e19);
             }
         } else if (length < 8) {
-            let e13 = src[position++];
+            let e20 = src[position++];
             let f = src[position++];
-            if ((e13 & 128) > 0 || (f & 128) > 0) {
+            if ((e20 & 0x80) > 0 || (f & 0x80) > 0) {
                 position -= 6;
                 return;
             }
-            if (length < 7) return fromCharCode(a10, b, c, d, e13, f);
+            if (length < 7) return fromCharCode(a25, b, c, d, e20, f);
             let g = src[position++];
-            if ((g & 128) > 0) {
+            if ((g & 0x80) > 0) {
                 position -= 7;
                 return;
             }
-            return fromCharCode(a10, b, c, d, e13, f, g);
+            return fromCharCode(a25, b, c, d, e20, f, g);
         } else {
-            let e14 = src[position++];
+            let e21 = src[position++];
             let f = src[position++];
             let g = src[position++];
             let h = src[position++];
-            if ((e14 & 128) > 0 || (f & 128) > 0 || (g & 128) > 0 || (h & 128) > 0) {
+            if ((e21 & 0x80) > 0 || (f & 0x80) > 0 || (g & 0x80) > 0 || (h & 0x80) > 0) {
                 position -= 8;
                 return;
             }
             if (length < 10) {
-                if (length === 8) return fromCharCode(a10, b, c, d, e14, f, g, h);
+                if (length === 8) return fromCharCode(a25, b, c, d, e21, f, g, h);
                 else {
                     let i13 = src[position++];
-                    if ((i13 & 128) > 0) {
+                    if ((i13 & 0x80) > 0) {
                         position -= 9;
                         return;
                     }
-                    return fromCharCode(a10, b, c, d, e14, f, g, h, i13);
+                    return fromCharCode(a25, b, c, d, e21, f, g, h, i13);
                 }
             } else if (length < 12) {
                 let i14 = src[position++];
                 let j = src[position++];
-                if ((i14 & 128) > 0 || (j & 128) > 0) {
+                if ((i14 & 0x80) > 0 || (j & 0x80) > 0) {
                     position -= 10;
                     return;
                 }
-                if (length < 11) return fromCharCode(a10, b, c, d, e14, f, g, h, i14, j);
+                if (length < 11) return fromCharCode(a25, b, c, d, e21, f, g, h, i14, j);
                 let k = src[position++];
-                if ((k & 128) > 0) {
+                if ((k & 0x80) > 0) {
                     position -= 11;
                     return;
                 }
-                return fromCharCode(a10, b, c, d, e14, f, g, h, i14, j, k);
+                return fromCharCode(a25, b, c, d, e21, f, g, h, i14, j, k);
             } else {
                 let i15 = src[position++];
                 let j = src[position++];
                 let k = src[position++];
                 let l = src[position++];
-                if ((i15 & 128) > 0 || (j & 128) > 0 || (k & 128) > 0 || (l & 128) > 0) {
+                if ((i15 & 0x80) > 0 || (j & 0x80) > 0 || (k & 0x80) > 0 || (l & 0x80) > 0) {
                     position -= 12;
                     return;
                 }
                 if (length < 14) {
-                    if (length === 12) return fromCharCode(a10, b, c, d, e14, f, g, h, i15, j, k, l);
+                    if (length === 12) return fromCharCode(a25, b, c, d, e21, f, g, h, i15, j, k, l);
                     else {
                         let m = src[position++];
-                        if ((m & 128) > 0) {
+                        if ((m & 0x80) > 0) {
                             position -= 13;
                             return;
                         }
-                        return fromCharCode(a10, b, c, d, e14, f, g, h, i15, j, k, l, m);
+                        return fromCharCode(a25, b, c, d, e21, f, g, h, i15, j, k, l, m);
                     }
                 } else {
                     let m = src[position++];
-                    let n11 = src[position++];
-                    if ((m & 128) > 0 || (n11 & 128) > 0) {
+                    let n14 = src[position++];
+                    if ((m & 0x80) > 0 || (n14 & 0x80) > 0) {
                         position -= 14;
                         return;
                     }
-                    if (length < 15) return fromCharCode(a10, b, c, d, e14, f, g, h, i15, j, k, l, m, n11);
-                    let o103 = src[position++];
-                    if ((o103 & 128) > 0) {
+                    if (length < 15) return fromCharCode(a25, b, c, d, e21, f, g, h, i15, j, k, l, m, n14);
+                    let o125 = src[position++];
+                    if ((o125 & 0x80) > 0) {
                         position -= 15;
                         return;
                     }
-                    return fromCharCode(a10, b, c, d, e14, f, g, h, i15, j, k, l, m, n11, o103);
+                    return fromCharCode(a25, b, c, d, e21, f, g, h, i15, j, k, l, m, n14, o125);
                 }
             }
         }
@@ -49999,13 +50000,13 @@ function getFloat16() {
     let byte0 = src[position++];
     let byte1 = src[position++];
     let half = (byte0 << 8) + byte1;
-    let exp = half >> 10 & 31;
-    let mant = half & 1023;
+    let exp = half >> 10 & 0x1f;
+    let mant = half & 0x3ff;
     let val;
     if (exp == 0) val = Math.exp(mant, -24);
     else if (exp != 31) val = Math.exp(mant + 1024, exp - 25);
     else val = mant == 0 ? Infinity : NaN;
-    return half & 32768 ? -val : val;
+    return half & 0x8000 ? -val : val;
 }
 new Array(4096);
 class Tag {
@@ -50038,7 +50039,7 @@ currentExtensions[5] = (fraction)=>{
     return fraction[1] * Math.exp(fraction[0] * Math.log(2));
 };
 const recordDefinition = (definition)=>{
-    let id = definition[0] - 57344;
+    let id = definition[0] - 0xe000;
     let structure = definition[1];
     let existingStructure = currentStructures[id];
     if (existingStructure && existingStructure.isShared) {
@@ -50070,7 +50071,7 @@ currentExtensions[27] = (data)=>{
     return (glbl[data[0]] || Error)(data[1], data[2]);
 };
 const packedTable = (read1)=>{
-    if (src[position++] != 132) throw new Error('Packed values structure must be followed by a 4 element array');
+    if (src[position++] != 0x84) throw new Error('Packed values structure must be followed by a 4 element array');
     let newPackedValues = read1();
     packedValues = packedValues ? newPackedValues.concat(packedValues.slice(newPackedValues.length)) : newPackedValues;
     packedValues.prefixes = read1();
@@ -50133,10 +50134,10 @@ currentExtensions[258] = (array)=>new Set(array)
     }
     return read4();
 }).handlesRead = true;
-function combine(a11, b) {
-    if (typeof a11 === 'string') return a11 + b;
-    if (a11 instanceof Array) return a11.concat(b);
-    return Object.assign({}, a11, b);
+function combine(a26, b) {
+    if (typeof a26 === 'string') return a26 + b;
+    if (a26 instanceof Array) return a26.concat(b);
+    return Object.assign({}, a26, b);
 }
 function getPackedValues() {
     if (!packedValues) {
@@ -50152,7 +50153,7 @@ currentExtensionRanges.push((tag, input)=>{
     if (tag >= 216 && tag <= 223) return combine(input, getPackedValues().suffixes[tag - 216]);
     if (tag >= 27647 && tag <= 28671) return combine(input, getPackedValues().suffixes[tag - 27639]);
     if (tag >= 1811940352 && tag <= 1879048191) return combine(input, getPackedValues().suffixes[tag - 1811939328]);
-    if (tag == 1399353956) {
+    if (tag == 0x53687264) {
         return {
             packedValues: packedValues,
             structures: currentStructures.slice(0),
@@ -50235,17 +50236,17 @@ function readBundleExt() {
     return read();
 }
 function readJustLength() {
-    let token = src[position++] & 31;
-    if (token > 23) {
+    let token = src[position++] & 0x1f;
+    if (token > 0x17) {
         switch(token){
-            case 24:
+            case 0x18:
                 token = src[position++];
                 break;
-            case 25:
+            case 0x19:
                 token = dataView.getUint16(position);
                 position += 2;
                 break;
-            case 26:
+            case 0x1a:
                 token = dataView.getUint32(position);
                 position += 4;
                 break;
@@ -50327,7 +50328,7 @@ let f32Array = new Float32Array(1);
 let u8Array = new Uint8Array(f32Array.buffer, 0, 4);
 function roundFloat32(float32Number) {
     f32Array[0] = float32Number;
-    let multiplier = mult10[(u8Array[3] & 127) << 1 | u8Array[2] >> 7];
+    let multiplier = mult10[(u8Array[3] & 0x7f) << 1 | u8Array[2] >> 7];
     return (multiplier * float32Number + (float32Number > 0 ? 0.5 : -0.5) >> 0) / multiplier;
 }
 let textEncoder;
@@ -50338,7 +50339,7 @@ let extensions, extensionClasses;
 const hasNodeBuffer = typeof Buffer !== 'undefined';
 const ByteArrayAllocate = hasNodeBuffer ? Buffer.allocUnsafeSlow : Uint8Array;
 const ByteArray = hasNodeBuffer ? Buffer : Uint8Array;
-const MAX_BUFFER_SIZE = hasNodeBuffer ? 4294967296 : 2144337920;
+const MAX_BUFFER_SIZE = hasNodeBuffer ? 0x100000000 : 0x7fd00000;
 let target;
 let targetView;
 let position1 = 0;
@@ -50387,7 +50388,7 @@ class Encoder extends Decoder {
             if (this._keyMap && !this._mapped) {
                 switch(value.constructor.name){
                     case 'Array':
-                        value = value.map((r4)=>this.encodeKeys(r4)
+                        value = value.map((r9)=>this.encodeKeys(r9)
                         );
                         break;
                 }
@@ -50401,15 +50402,15 @@ class Encoder extends Decoder {
                 position1 = 0;
             }
             safeEnd = target.length - 10;
-            if (safeEnd - position1 < 2048) {
+            if (safeEnd - position1 < 0x800) {
                 target = new ByteArrayAllocate(target.length);
                 targetView = new DataView(target.buffer, 0, target.length);
                 safeEnd = target.length - 10;
                 position1 = 0;
-            } else if (encodeOptions === REUSE_BUFFER_MODE) position1 = position1 + 7 & 2147483640;
+            } else if (encodeOptions === REUSE_BUFFER_MODE) position1 = position1 + 7 & 0x7ffffff8;
             start = position1;
             if (encoder1.useSelfDescribedHeader) {
-                targetView.setUint32(position1, 3654940416);
+                targetView.setUint32(position1, 0xd9d9f700);
                 position1 += 3;
             }
             referenceMap1 = encoder1.structuredClone ? new Map() : null;
@@ -50446,7 +50447,7 @@ class Encoder extends Decoder {
                             }
                             transition = nextTransition;
                         }
-                        transition[RECORD_SYMBOL] = i193 | 1048576;
+                        transition[RECORD_SYMBOL] = i193 | 0x100000;
                     }
                 }
                 if (!isSequential) sharedStructures.nextId = sharedStructuresLength;
@@ -50463,7 +50464,7 @@ class Encoder extends Decoder {
                 packedValues1.samplingPackedValues = samplingPackedValues;
                 findRepetitiveStrings(value, packedValues1);
                 if (packedValues1.values.length > 0) {
-                    target[position1++] = 216;
+                    target[position1++] = 0xd8;
                     target[position1++] = 51;
                     writeArrayHeader(4);
                     let valuesArray = packedValues1.values;
@@ -50549,9 +50550,9 @@ class Encoder extends Decoder {
                 if (packedObjectMap) {
                     let packedPosition = packedObjectMap[value];
                     if (packedPosition >= 0) {
-                        if (packedPosition < 16) target[position1++] = packedPosition + 224;
+                        if (packedPosition < 16) target[position1++] = packedPosition + 0xe0;
                         else {
-                            target[position1++] = 198;
+                            target[position1++] = 0xc6;
                             if (packedPosition & 1) encode12(15 - packedPosition >> 1);
                             else encode12(packedPosition - 16 >> 1);
                         }
@@ -50565,16 +50566,16 @@ class Encoder extends Decoder {
                     }
                 }
                 let strLength = value.length;
-                if (bundledStrings1 && strLength >= 4 && strLength < 1024) {
-                    if ((bundledStrings1.size += strLength) > 61440) {
+                if (bundledStrings1 && strLength >= 4 && strLength < 0x400) {
+                    if ((bundledStrings1.size += strLength) > 0xf000) {
                         let extStart;
                         let maxBytes = (bundledStrings1[0] ? bundledStrings1[0].length * 3 + bundledStrings1[1].length : 0) + 10;
                         if (position1 + maxBytes > safeEnd) target = makeRoom(position1 + maxBytes);
-                        target[position1++] = 217;
-                        target[position1++] = 223;
-                        target[position1++] = 249;
-                        target[position1++] = bundledStrings1.position ? 132 : 130;
-                        target[position1++] = 26;
+                        target[position1++] = 0xd9;
+                        target[position1++] = 0xdf;
+                        target[position1++] = 0xf9;
+                        target[position1++] = bundledStrings1.position ? 0x84 : 0x82;
+                        target[position1++] = 0x1a;
                         extStart = position1 - start;
                         position1 += 4;
                         if (bundledStrings1.position) {
@@ -50589,127 +50590,127 @@ class Encoder extends Decoder {
                     }
                     let twoByte = hasNonLatin.test(value);
                     bundledStrings1[twoByte ? 0 : 1] += value;
-                    target[position1++] = twoByte ? 206 : 207;
+                    target[position1++] = twoByte ? 0xce : 0xcf;
                     encode12(strLength);
                     return;
                 }
                 let headerSize;
-                if (strLength < 32) {
+                if (strLength < 0x20) {
                     headerSize = 1;
-                } else if (strLength < 256) {
+                } else if (strLength < 0x100) {
                     headerSize = 2;
-                } else if (strLength < 65536) {
+                } else if (strLength < 0x10000) {
                     headerSize = 3;
                 } else {
                     headerSize = 5;
                 }
                 let maxBytes = strLength * 3;
                 if (position1 + maxBytes > safeEnd) target = makeRoom(position1 + maxBytes);
-                if (strLength < 64 || !encodeUtf8) {
+                if (strLength < 0x40 || !encodeUtf8) {
                     let i196, c1, c2, strPosition = position1 + headerSize;
                     for(i196 = 0; i196 < strLength; i196++){
                         c1 = value.charCodeAt(i196);
-                        if (c1 < 128) {
+                        if (c1 < 0x80) {
                             target[strPosition++] = c1;
-                        } else if (c1 < 2048) {
-                            target[strPosition++] = c1 >> 6 | 192;
-                            target[strPosition++] = c1 & 63 | 128;
-                        } else if ((c1 & 64512) === 55296 && ((c2 = value.charCodeAt(i196 + 1)) & 64512) === 56320) {
-                            c1 = 65536 + ((c1 & 1023) << 10) + (c2 & 1023);
+                        } else if (c1 < 0x800) {
+                            target[strPosition++] = c1 >> 6 | 0xc0;
+                            target[strPosition++] = c1 & 0x3f | 0x80;
+                        } else if ((c1 & 0xfc00) === 0xd800 && ((c2 = value.charCodeAt(i196 + 1)) & 0xfc00) === 0xdc00) {
+                            c1 = 0x10000 + ((c1 & 0x03ff) << 10) + (c2 & 0x03ff);
                             i196++;
-                            target[strPosition++] = c1 >> 18 | 240;
-                            target[strPosition++] = c1 >> 12 & 63 | 128;
-                            target[strPosition++] = c1 >> 6 & 63 | 128;
-                            target[strPosition++] = c1 & 63 | 128;
+                            target[strPosition++] = c1 >> 18 | 0xf0;
+                            target[strPosition++] = c1 >> 12 & 0x3f | 0x80;
+                            target[strPosition++] = c1 >> 6 & 0x3f | 0x80;
+                            target[strPosition++] = c1 & 0x3f | 0x80;
                         } else {
-                            target[strPosition++] = c1 >> 12 | 224;
-                            target[strPosition++] = c1 >> 6 & 63 | 128;
-                            target[strPosition++] = c1 & 63 | 128;
+                            target[strPosition++] = c1 >> 12 | 0xe0;
+                            target[strPosition++] = c1 >> 6 & 0x3f | 0x80;
+                            target[strPosition++] = c1 & 0x3f | 0x80;
                         }
                     }
                     length = strPosition - position1 - headerSize;
                 } else {
                     length = encodeUtf8(value, position1 + headerSize, maxBytes);
                 }
-                if (length < 24) {
-                    target[position1++] = 96 | length;
-                } else if (length < 256) {
+                if (length < 0x18) {
+                    target[position1++] = 0x60 | length;
+                } else if (length < 0x100) {
                     if (headerSize < 2) {
                         target.copyWithin(position1 + 2, position1 + 1, position1 + 1 + length);
                     }
-                    target[position1++] = 120;
+                    target[position1++] = 0x78;
                     target[position1++] = length;
-                } else if (length < 65536) {
+                } else if (length < 0x10000) {
                     if (headerSize < 3) {
                         target.copyWithin(position1 + 3, position1 + 2, position1 + 2 + length);
                     }
-                    target[position1++] = 121;
+                    target[position1++] = 0x79;
                     target[position1++] = length >> 8;
-                    target[position1++] = length & 255;
+                    target[position1++] = length & 0xff;
                 } else {
                     if (headerSize < 5) {
                         target.copyWithin(position1 + 5, position1 + 3, position1 + 3 + length);
                     }
-                    target[position1++] = 122;
+                    target[position1++] = 0x7a;
                     targetView.setUint32(position1, length);
                     position1 += 4;
                 }
                 position1 += length;
             } else if (type === 'number') {
                 if (value >>> 0 === value) {
-                    if (value < 24) {
+                    if (value < 0x18) {
                         target[position1++] = value;
-                    } else if (value < 256) {
-                        target[position1++] = 24;
+                    } else if (value < 0x100) {
+                        target[position1++] = 0x18;
                         target[position1++] = value;
-                    } else if (value < 65536) {
-                        target[position1++] = 25;
+                    } else if (value < 0x10000) {
+                        target[position1++] = 0x19;
                         target[position1++] = value >> 8;
-                        target[position1++] = value & 255;
+                        target[position1++] = value & 0xff;
                     } else {
-                        target[position1++] = 26;
+                        target[position1++] = 0x1a;
                         targetView.setUint32(position1, value);
                         position1 += 4;
                     }
                 } else if (value >> 0 === value) {
-                    if (value >= -24) {
-                        target[position1++] = 31 - value;
-                    } else if (value >= -256) {
-                        target[position1++] = 56;
+                    if (value >= -0x18) {
+                        target[position1++] = 0x1f - value;
+                    } else if (value >= -0x100) {
+                        target[position1++] = 0x38;
                         target[position1++] = ~value;
-                    } else if (value >= -65536) {
-                        target[position1++] = 57;
+                    } else if (value >= -0x10000) {
+                        target[position1++] = 0x39;
                         targetView.setUint16(position1, ~value);
                         position1 += 2;
                     } else {
-                        target[position1++] = 58;
+                        target[position1++] = 0x3a;
                         targetView.setUint32(position1, ~value);
                         position1 += 4;
                     }
                 } else {
                     let useFloat32;
-                    if ((useFloat32 = this.useFloat32) > 0 && value < 4294967296 && value >= -2147483648) {
-                        target[position1++] = 250;
+                    if ((useFloat32 = this.useFloat32) > 0 && value < 0x100000000 && value >= -0x80000000) {
+                        target[position1++] = 0xfa;
                         targetView.setFloat32(position1, value);
                         let xShifted;
-                        if (useFloat32 < 4 || (xShifted = value * mult10[(target[position1] & 127) << 1 | target[position1 + 1] >> 7]) >> 0 === xShifted) {
+                        if (useFloat32 < 4 || (xShifted = value * mult10[(target[position1] & 0x7f) << 1 | target[position1 + 1] >> 7]) >> 0 === xShifted) {
                             position1 += 4;
                             return;
                         } else position1--;
                     }
-                    target[position1++] = 251;
+                    target[position1++] = 0xfb;
                     targetView.setFloat64(position1, value);
                     position1 += 8;
                 }
             } else if (type === 'object') {
-                if (!value) target[position1++] = 246;
+                if (!value) target[position1++] = 0xf6;
                 else {
                     if (referenceMap1) {
                         let referee = referenceMap1.get(value);
                         if (referee) {
-                            target[position1++] = 216;
+                            target[position1++] = 0xd8;
                             target[position1++] = 29;
-                            target[position1++] = 25;
+                            target[position1++] = 0x19;
                             if (!referee.references) {
                                 let idsToInsert = referenceMap1.idsToInsert || (referenceMap1.idsToInsert = []);
                                 referee.references = [];
@@ -50727,8 +50728,8 @@ class Encoder extends Decoder {
                         writeObject(value, true);
                     } else if (constructor === Array) {
                         length = value.length;
-                        if (length < 24) {
-                            target[position1++] = 128 | length;
+                        if (length < 0x18) {
+                            target[position1++] = 0x80 | length;
                         } else {
                             writeArrayHeader(length);
                         }
@@ -50737,22 +50738,22 @@ class Encoder extends Decoder {
                         }
                     } else if (constructor === Map) {
                         if (this.mapsAsObjects ? this.useTag259ForMaps !== false : this.useTag259ForMaps) {
-                            target[position1++] = 217;
+                            target[position1++] = 0xd9;
                             target[position1++] = 1;
                             target[position1++] = 3;
                         }
                         length = value.size;
-                        if (length < 24) {
-                            target[position1++] = 160 | length;
-                        } else if (length < 256) {
-                            target[position1++] = 184;
+                        if (length < 0x18) {
+                            target[position1++] = 0xa0 | length;
+                        } else if (length < 0x100) {
+                            target[position1++] = 0xb8;
                             target[position1++] = length;
-                        } else if (length < 65536) {
-                            target[position1++] = 185;
+                        } else if (length < 0x10000) {
+                            target[position1++] = 0xb9;
                             target[position1++] = length >> 8;
-                            target[position1++] = length & 255;
+                            target[position1++] = length & 0xff;
                         } else {
-                            target[position1++] = 186;
+                            target[position1++] = 0xba;
                             targetView.setUint32(position1, length);
                             position1 += 4;
                         }
@@ -50774,17 +50775,17 @@ class Encoder extends Decoder {
                                 let extension = extensions[i198];
                                 let tag = extension.tag;
                                 if (tag == undefined) tag = extension.getTag && extension.getTag(value);
-                                if (tag < 24) {
-                                    target[position1++] = 192 | tag;
-                                } else if (tag < 256) {
-                                    target[position1++] = 216;
+                                if (tag < 0x18) {
+                                    target[position1++] = 0xc0 | tag;
+                                } else if (tag < 0x100) {
+                                    target[position1++] = 0xd8;
                                     target[position1++] = tag;
-                                } else if (tag < 65536) {
-                                    target[position1++] = 217;
+                                } else if (tag < 0x10000) {
+                                    target[position1++] = 0xd9;
                                     target[position1++] = tag >> 8;
-                                    target[position1++] = tag & 255;
+                                    target[position1++] = tag & 0xff;
                                 } else if (tag > -1) {
-                                    target[position1++] = 218;
+                                    target[position1++] = 0xda;
                                     targetView.setUint32(position1, tag);
                                     position1 += 4;
                                 }
@@ -50793,28 +50794,28 @@ class Encoder extends Decoder {
                             }
                         }
                         if (value[Symbol.iterator]) {
-                            target[position1++] = 159;
+                            target[position1++] = 0x9f;
                             for (let entry of value){
                                 encode12(entry);
                             }
-                            target[position1++] = 255;
+                            target[position1++] = 0xff;
                             return;
                         }
                         writeObject(value, !value.hasOwnProperty);
                     }
                 }
             } else if (type === 'boolean') {
-                target[position1++] = value ? 245 : 244;
+                target[position1++] = value ? 0xf5 : 0xf4;
             } else if (type === 'bigint') {
                 if (value < BigInt(1) << BigInt(64) && value >= 0) {
-                    target[position1++] = 27;
+                    target[position1++] = 0x1b;
                     targetView.setBigUint64(position1, value);
                 } else if (value > -(BigInt(1) << BigInt(64)) && value < 0) {
-                    target[position1++] = 59;
+                    target[position1++] = 0x3b;
                     targetView.setBigUint64(position1, -value - BigInt(1));
                 } else {
                     if (this.largeBigIntToFloat) {
-                        target[position1++] = 251;
+                        target[position1++] = 0xfb;
                         targetView.setFloat64(position1, Number(value));
                     } else {
                         throw new RangeError(value + ' was too large to fit in CBOR 64-bit integer format, set largeBigIntToFloat to convert to float-64');
@@ -50822,7 +50823,7 @@ class Encoder extends Decoder {
                 }
                 position1 += 8;
             } else if (type === 'undefined') {
-                target[position1++] = 247;
+                target[position1++] = 0xf7;
             } else {
                 throw new Error('Unknown type: ' + type);
             }
@@ -50831,17 +50832,17 @@ class Encoder extends Decoder {
             let keys = Object.keys(object);
             let vals = Object.values(object);
             let length = keys.length;
-            if (length < 24) {
-                target[position1++] = 160 | length;
-            } else if (length < 256) {
-                target[position1++] = 184;
+            if (length < 0x18) {
+                target[position1++] = 0xa0 | length;
+            } else if (length < 0x100) {
+                target[position1++] = 0xb8;
                 target[position1++] = length;
-            } else if (length < 65536) {
-                target[position1++] = 185;
+            } else if (length < 0x10000) {
+                target[position1++] = 0xb9;
                 target[position1++] = length >> 8;
-                target[position1++] = length & 255;
+                target[position1++] = length & 0xff;
             } else {
-                target[position1++] = 186;
+                target[position1++] = 0xba;
                 targetView.setUint32(position1, length);
                 position1 += 4;
             }
@@ -50857,7 +50858,7 @@ class Encoder extends Decoder {
                 }
             }
         } : (object, safePrototype)=>{
-            target[position1++] = 185;
+            target[position1++] = 0xb9;
             let objectOffset = position1 - start;
             position1 += 2;
             let size = 0;
@@ -50875,7 +50876,7 @@ class Encoder extends Decoder {
                 }
             }
             target[(objectOffset++) + start] = size >> 8;
-            target[objectOffset + start] = size & 255;
+            target[objectOffset + start] = size & 0xff;
         } : (object, safePrototype)=>{
             let nextTransition, transition = structures.transitions || (structures.transitions = Object.create(null));
             let newTransitions = 0;
@@ -50899,8 +50900,8 @@ class Encoder extends Decoder {
                 for(let key in object)if (safePrototype || object.hasOwnProperty(key)) {
                     nextTransition = transition[key];
                     if (!nextTransition) {
-                        if (transition[RECORD_SYMBOL] & 1048576) {
-                            parentRecordId = transition[RECORD_SYMBOL] & 65535;
+                        if (transition[RECORD_SYMBOL] & 0x100000) {
+                            parentRecordId = transition[RECORD_SYMBOL] & 0xffff;
                         }
                         nextTransition = transition[key] = Object.create(null);
                         newTransitions++;
@@ -50911,10 +50912,10 @@ class Encoder extends Decoder {
             }
             let recordId = transition[RECORD_SYMBOL];
             if (recordId !== undefined) {
-                recordId &= 65535;
-                target[position1++] = 217;
-                target[position1++] = recordId >> 8 | 224;
-                target[position1++] = recordId & 255;
+                recordId &= 0xffff;
+                target[position1++] = 0xd9;
+                target[position1++] = recordId >> 8 | 0xe0;
+                target[position1++] = recordId & 0xff;
             } else {
                 if (!keys) keys = transition.__keys__ || (transition.__keys__ = Object.keys(object));
                 if (parentRecordId === undefined) {
@@ -50923,7 +50924,7 @@ class Encoder extends Decoder {
                         recordId = 0;
                         structures.nextId = 1;
                     }
-                    if (recordId >= 256) {
+                    if (recordId >= 0x100) {
                         structures.nextId = (recordId = maxSharedStructures) + 1;
                     }
                 } else {
@@ -50931,32 +50932,32 @@ class Encoder extends Decoder {
                 }
                 structures[recordId] = keys;
                 if (recordId < maxSharedStructures) {
-                    target[position1++] = 217;
-                    target[position1++] = recordId >> 8 | 224;
-                    target[position1++] = recordId & 255;
+                    target[position1++] = 0xd9;
+                    target[position1++] = recordId >> 8 | 0xe0;
+                    target[position1++] = recordId & 0xff;
                     transition = structures.transitions;
                     for(let i202 = 0; i202 < length; i202++){
-                        if (transition[RECORD_SYMBOL] === undefined || transition[RECORD_SYMBOL] & 1048576) transition[RECORD_SYMBOL] = recordId;
+                        if (transition[RECORD_SYMBOL] === undefined || transition[RECORD_SYMBOL] & 0x100000) transition[RECORD_SYMBOL] = recordId;
                         transition = transition[keys[i202]];
                     }
-                    transition[RECORD_SYMBOL] = recordId | 1048576;
+                    transition[RECORD_SYMBOL] = recordId | 0x100000;
                     hasSharedUpdate = true;
                 } else {
                     transition[RECORD_SYMBOL] = recordId;
-                    targetView.setUint32(position1, 3655335680);
+                    targetView.setUint32(position1, 0xd9dfff00);
                     position1 += 3;
                     if (newTransitions) transitionsCount += serializationsSinceTransitionRebuild * newTransitions;
-                    if (recordIdsToRemove.length >= 256 - maxSharedStructures) recordIdsToRemove.shift()[RECORD_SYMBOL] = undefined;
+                    if (recordIdsToRemove.length >= 0x100 - maxSharedStructures) recordIdsToRemove.shift()[RECORD_SYMBOL] = undefined;
                     recordIdsToRemove.push(transition);
                     writeArrayHeader(length + 2);
-                    encode12(57344 + recordId);
+                    encode12(0xe000 + recordId);
                     encode12(keys);
                     for (let v of Object.values(object))encode12(v);
                     return;
                 }
             }
-            if (length < 24) {
-                target[position1++] = 128 | length;
+            if (length < 0x18) {
+                target[position1++] = 0x80 | length;
             } else {
                 writeArrayHeader(length);
             }
@@ -50964,9 +50965,9 @@ class Encoder extends Decoder {
         };
         const makeRoom = (end)=>{
             let newSize;
-            if (end > 16777216) {
+            if (end > 0x1000000) {
                 if (end - start > MAX_BUFFER_SIZE) throw new Error('Encoded buffer would be larger than maximum buffer size');
-                newSize = Math.min(MAX_BUFFER_SIZE, Math.round(Math.max((end - start) * (end > 67108864 ? 1.25 : 2), 4194304) / 4096) * 4096);
+                newSize = Math.min(MAX_BUFFER_SIZE, Math.round(Math.max((end - start) * (end > 0x4000000 ? 1.25 : 2), 0x400000) / 0x1000) * 0x1000);
             } else newSize = (Math.max(end - start << 2, target.length - 1) >> 12) + 1 << 12;
             let newBuffer = new ByteArrayAllocate(newSize);
             targetView = new DataView(newBuffer.buffer, 0, newSize);
@@ -51015,16 +51016,16 @@ class SharedData {
     }
 }
 function writeArrayHeader(length) {
-    if (length < 24) target[position1++] = 128 | length;
-    else if (length < 256) {
-        target[position1++] = 152;
+    if (length < 0x18) target[position1++] = 0x80 | length;
+    else if (length < 0x100) {
+        target[position1++] = 0x98;
         target[position1++] = length;
-    } else if (length < 65536) {
-        target[position1++] = 153;
+    } else if (length < 0x10000) {
+        target[position1++] = 0x99;
         target[position1++] = length >> 8;
-        target[position1++] = length & 255;
+        target[position1++] = length & 0xff;
     } else {
-        target[position1++] = 154;
+        target[position1++] = 0x9a;
         targetView.setUint32(position1, length);
         position1 += 4;
     }
@@ -51103,12 +51104,12 @@ extensions = [
         tag: 1,
         encode (date, encode) {
             let seconds = date.getTime() / 1000;
-            if ((this.useTimestamp32 || date.getMilliseconds() === 0) && seconds >= 0 && seconds < 4294967296) {
-                target[position1++] = 26;
+            if ((this.useTimestamp32 || date.getMilliseconds() === 0) && seconds >= 0 && seconds < 0x100000000) {
+                target[position1++] = 0x1a;
                 targetView.setUint32(position1, seconds);
                 position1 += 4;
             } else {
-                target[position1++] = 251;
+                target[position1++] = 0xfb;
                 targetView.setFloat64(position1, seconds);
                 position1 += 8;
             }
@@ -51174,7 +51175,7 @@ extensions = [
             let packedValues3 = sharedData.packedValues || [];
             let sharedStructures = sharedData.structures || [];
             if (packedValues3.values.length > 0) {
-                target[position1++] = 216;
+                target[position1++] = 0xd8;
                 target[position1++] = 51;
                 writeArrayHeader(4);
                 let valuesArray = packedValues3.values;
@@ -51187,13 +51188,13 @@ extensions = [
                 }
             }
             if (sharedStructures) {
-                targetView.setUint32(position1, 3655335424);
+                targetView.setUint32(position1, 0xd9dffe00);
                 position1 += 3;
                 let definitions = sharedStructures.slice(0);
-                definitions.unshift(57344);
-                definitions.push(new Tag(sharedData.version, 1399353956));
+                definitions.unshift(0xe000);
+                definitions.push(new Tag(sharedData.version, 0x53687264));
                 encode6(definitions);
-            } else encode6(new Tag(sharedData.version, 1399353956));
+            } else encode6(new Tag(sharedData.version, 0x53687264));
         }
     }
 ];
@@ -51211,17 +51212,17 @@ function typedArrayEncoder(tag, size) {
 }
 function writeBuffer(buffer, makeRoom) {
     let length = buffer.byteLength;
-    if (length < 24) {
-        target[position1++] = 64 + length;
-    } else if (length < 256) {
-        target[position1++] = 88;
+    if (length < 0x18) {
+        target[position1++] = 0x40 + length;
+    } else if (length < 0x100) {
+        target[position1++] = 0x58;
         target[position1++] = length;
-    } else if (length < 65536) {
-        target[position1++] = 89;
+    } else if (length < 0x10000) {
+        target[position1++] = 0x59;
         target[position1++] = length >> 8;
-        target[position1++] = length & 255;
+        target[position1++] = length & 0xff;
     } else {
-        target[position1++] = 90;
+        target[position1++] = 0x5a;
         targetView.setUint32(position1, length);
         position1 += 4;
     }
@@ -51235,14 +51236,14 @@ function insertIds(serialized, idsToInsert) {
     let nextId;
     let distanceToMove = idsToInsert.length * 2;
     let lastEnd = serialized.length - distanceToMove;
-    idsToInsert.sort((a12, b)=>a12.offset > b.offset ? 1 : -1
+    idsToInsert.sort((a27, b)=>a27.offset > b.offset ? 1 : -1
     );
     for(let id = 0; id < idsToInsert.length; id++){
         let referee = idsToInsert[id];
         referee.id = id;
         for (let position4 of referee.references){
             serialized[position4++] = id >> 8;
-            serialized[position4] = id & 255;
+            serialized[position4] = id & 0xff;
         }
     }
     while(nextId = idsToInsert.pop()){
@@ -51250,7 +51251,7 @@ function insertIds(serialized, idsToInsert) {
         serialized.copyWithin(offset + distanceToMove, offset, lastEnd);
         distanceToMove -= 2;
         let position5 = offset + distanceToMove;
-        serialized[position5++] = 216;
+        serialized[position5++] = 0xd8;
         serialized[position5++] = 28;
         lastEnd = offset;
     }
@@ -51329,17 +51330,17 @@ function decodeIter(bufferIterator, options = {}) {
         return yields;
     };
     if (typeof bufferIterator[Symbol.iterator] === 'function') {
-        return (function* iter() {
+        return function* iter() {
             for (const value of bufferIterator){
                 yield* parser(value);
             }
-        })();
+        }();
     } else if (typeof bufferIterator[Symbol.asyncIterator] === 'function') {
-        return (async function* iter() {
+        return async function* iter() {
             for await (const value of bufferIterator){
                 yield* parser(value);
             }
-        })();
+        }();
     }
 }
 const mod3 = function() {
@@ -51373,7 +51374,7 @@ const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 }, lookup = genLookup(chars), lookupUrl = genLookup(charsUrl);
 let base64 = {};
 base64.toArrayBuffer = (data, urlMode)=>{
-    let bufferLength = data.length * 0.75, len = data.length, i207, p = 0, encoded1, encoded2, encoded3, encoded4;
+    let bufferLength = data.length * .75, len = data.length, i207, p = 0, encoded1, encoded2, encoded3, encoded4;
     if (data[data.length - 1] === "=") {
         bufferLength--;
         if (data[data.length - 2] === "=") {
@@ -51432,8 +51433,8 @@ function isPem(pem) {
     const pemRegex = /^-----BEGIN .+-----$\n([A-Za-z0-9+/=]|\n)*^-----END .+-----$/m;
     return !!pem.match(pemRegex);
 }
-function isPositiveInteger(n12) {
-    return n12 >>> 0 === parseFloat(n12);
+function isPositiveInteger(n15) {
+    return n15 >>> 0 === parseFloat(n15);
 }
 function abToBuf(ab) {
     return new Uint8Array(ab).buffer;
@@ -51458,7 +51459,7 @@ function abToPem(type, ab) {
     const str = coerceToBase64(ab, "pem buffer");
     return [
         `-----BEGIN ${type}-----\n`,
-        ...str.match(/.{1,64}/g).map((s12)=>s12 + "\n"
+        ...str.match(/.{1,64}/g).map((s15)=>s15 + "\n"
         ),
         `-----END ${type}-----\n`, 
     ].join("");
@@ -51730,15 +51731,15 @@ async function verifySignature(publicKey, expectedSignature, data, hashName) {
         console.error(_e);
     }
 }
-async function hashDigest(o104, alg) {
-    if (typeof o104 === "string") {
-        o104 = new TextEncoder().encode(o104);
+async function hashDigest(o126, alg) {
+    if (typeof o126 === "string") {
+        o126 = new TextEncoder().encode(o126);
     }
-    const result = await webcrypto.subtle.digest(alg || "SHA-256", o104);
+    const result = await webcrypto.subtle.digest(alg || "SHA-256", o126);
     return result;
 }
-function randomValues(n13) {
-    const byteArray = new Uint8Array(n13);
+function randomValues(n16) {
+    const byteArray = new Uint8Array(n16);
     webcrypto.getRandomValues(byteArray);
     return byteArray;
 }
@@ -52091,7 +52092,7 @@ function decodeU2FTransportType(u2fRawTransports) {
     let type = u2fRawTransports >> 3;
     const ret = new Set();
     for(let i215 = bitCount; i215 >= 0; i215--){
-        if (type & 1) switch(i215){
+        if (type & 0x1) switch(i215){
             case 0:
                 ret.add("bluetooth-classic");
                 break;
@@ -52119,15 +52120,15 @@ function decodeKeyUsage(value) {
         throw new Error("certificate: expected 'keyUsage' value to be number");
     }
     const retSet = new Set();
-    if (value & 128) retSet.add("digitalSignature");
-    if (value & 64) retSet.add("contentCommitment");
-    if (value & 32) retSet.add("keyEncipherment");
-    if (value & 16) retSet.add("dataEncipherment");
-    if (value & 8) retSet.add("keyAgreement");
-    if (value & 4) retSet.add("keyCertSign");
-    if (value & 2) retSet.add("cRLSign");
-    if (value & 1) retSet.add("encipherOnly");
-    if (value & 1) retSet.add("decipherOnly");
+    if (value & 0x80) retSet.add("digitalSignature");
+    if (value & 0x40) retSet.add("contentCommitment");
+    if (value & 0x20) retSet.add("keyEncipherment");
+    if (value & 0x10) retSet.add("dataEncipherment");
+    if (value & 0x08) retSet.add("keyAgreement");
+    if (value & 0x04) retSet.add("keyCertSign");
+    if (value & 0x02) retSet.add("cRLSign");
+    if (value & 0x01) retSet.add("encipherOnly");
+    if (value & 0x01) retSet.add("decipherOnly");
     return retSet;
 }
 function decodeExtKeyUsage(value) {
@@ -52270,11 +52271,11 @@ class CertManager {
         if (!Array.isArray(roots) || roots.length < 1) {
             throw new Error("expected 'roots' to be non-empty Array, got: " + roots);
         }
-        roots = roots.map((r5)=>{
-            if (!(r5 instanceof Certificate1)) {
-                r5 = new Certificate1(r5);
+        roots = roots.map((r10)=>{
+            if (!(r10 instanceof Certificate1)) {
+                r10 = new Certificate1(r10);
             }
-            return r5._cert;
+            return r10._cert;
         });
         crls = crls || [];
         if (!Array.isArray(crls)) {
@@ -52551,7 +52552,7 @@ class PublicKey {
         if (this._original_pem && !forcedExport) {
             return this._original_pem;
         } else if (this.getKey()) {
-            const pemResult = abToPem("PUBLIC KEY", await mod5.webcrypto.subtle.exportKey("spki", this.getKey()));
+            let pemResult = abToPem("PUBLIC KEY", await mod5.webcrypto.subtle.exportKey("spki", this.getKey()));
             if (pemResult[pemResult.length - 1] !== "\n") {
                 pemResult += "\n";
             }
@@ -52660,15 +52661,15 @@ class MdsEntry {
         this.attachmentHint = this.attachmentHint instanceof Array ? this.attachmentHint : attachmentHintToArr(this.attachmentHint);
         function attachmentHintToArr(hint) {
             const ret = [];
-            if (hint & 1) ret.push("internal");
-            if (hint & 2) ret.push("external");
-            if (hint & 4) ret.push("wired");
-            if (hint & 8) ret.push("wireless");
-            if (hint & 16) ret.push("nfc");
-            if (hint & 32) ret.push("bluetooth");
-            if (hint & 64) ret.push("network");
-            if (hint & 128) ret.push("ready");
-            if (hint & 65280) throw new Error("unknown attachment hint flags: " + hint & 65280);
+            if (hint & 0x0001) ret.push("internal");
+            if (hint & 0x0002) ret.push("external");
+            if (hint & 0x0004) ret.push("wired");
+            if (hint & 0x0008) ret.push("wireless");
+            if (hint & 0x0010) ret.push("nfc");
+            if (hint & 0x0020) ret.push("bluetooth");
+            if (hint & 0x0040) ret.push("network");
+            if (hint & 0x0080) ret.push("ready");
+            if (hint & 0xFF00) throw new Error("unknown attachment hint flags: " + hint & 0xFF00);
             return ret;
         }
         if (!Array.isArray(this.attestationTypes)) throw new Error("expected attestationTypes to be Array, got: " + this.attestationTypes);
@@ -52676,11 +52677,11 @@ class MdsEntry {
         );
         function attestationTypeToStr(att) {
             switch(att){
-                case 15879:
+                case 0x3E07:
                     return "basic-full";
-                case 15880:
+                case 0x3E08:
                     return "basic-surrogate";
-                case 15881:
+                case 0x3E09:
                     return "ecdaa";
                 default:
                     throw new Error("uknown attestation type: " + att);
@@ -52692,23 +52693,23 @@ class MdsEntry {
         this.authenticationAlgorithm = typeof this.authenticationAlgorithm === "string" ? this.authenticationAlgorithm : algToStr(this.authenticationAlgorithm);
         function algToStr(alg) {
             switch(alg){
-                case 1:
+                case 0x0001:
                     return "ALG_SIGN_SECP256R1_ECDSA_SHA256_RAW";
-                case 2:
+                case 0x0002:
                     return "ALG_SIGN_SECP256R1_ECDSA_SHA256_DER";
-                case 3:
+                case 0x0003:
                     return "ALG_SIGN_RSASSA_PSS_SHA256_RAW";
-                case 4:
+                case 0x0004:
                     return "ALG_SIGN_RSASSA_PSS_SHA256_DER";
-                case 5:
+                case 0x0005:
                     return "ALG_SIGN_SECP256K1_ECDSA_SHA256_RAW";
-                case 6:
+                case 0x0006:
                     return "ALG_SIGN_SECP256K1_ECDSA_SHA256_DER";
-                case 7:
+                case 0x0007:
                     return "ALG_SIGN_SM2_SM3_RAW";
-                case 8:
+                case 0x0008:
                     return "ALG_SIGN_RSA_EMSA_PKCS1_SHA256_RAW";
-                case 9:
+                case 0x0009:
                     return "ALG_SIGN_RSA_EMSA_PKCS1_SHA256_DER";
                 default:
                     throw new Error("unknown authentication algorithm: " + alg);
@@ -52722,36 +52723,36 @@ class MdsEntry {
         this.keyProtection = this.keyProtection instanceof Array ? this.keyProtection : keyProtToArr(this.keyProtection);
         function keyProtToArr(kp) {
             const ret = [];
-            if (kp & 1) ret.push("software");
-            if (kp & 2) ret.push("hardware");
-            if (kp & 4) ret.push("tee");
-            if (kp & 8) ret.push("secure-element");
-            if (kp & 16) ret.push("remote-handle");
-            if (kp & 65504) throw new Error("unknown key protection flags: " + kp & 65504);
+            if (kp & 0x0001) ret.push("software");
+            if (kp & 0x0002) ret.push("hardware");
+            if (kp & 0x0004) ret.push("tee");
+            if (kp & 0x0008) ret.push("secure-element");
+            if (kp & 0x0010) ret.push("remote-handle");
+            if (kp & 0xFFE0) throw new Error("unknown key protection flags: " + kp & 0xFFE0);
             return ret;
         }
         this.matcherProtection = this.matcherProtection instanceof Array ? this.matcherProtection : matcherProtToArr(this.matcherProtection);
         function matcherProtToArr(mp) {
             const ret = [];
-            if (mp & 1) ret.push("software");
-            if (mp & 2) ret.push("hardware");
-            if (mp & 4) ret.push("tee");
-            if (mp & 65528) throw new Error("unknown key protection flags: " + mp & 65528);
+            if (mp & 0x0001) ret.push("software");
+            if (mp & 0x0002) ret.push("hardware");
+            if (mp & 0x0004) ret.push("tee");
+            if (mp & 0xFFF8) throw new Error("unknown key protection flags: " + mp & 0xFFF8);
             return ret;
         }
         if (this.publicKeyAlgAndEncodings) this.publicKeyAlgAndEncoding = `ALG_KEY_${this.publicKeyAlgAndEncodings[0].toUpperCase()}`;
         this.publicKeyAlgAndEncoding = typeof this.publicKeyAlgAndEncoding === "string" ? this.publicKeyAlgAndEncoding : pkAlgAndEncodingToStr(this.publicKeyAlgAndEncoding);
         function pkAlgAndEncodingToStr(pkalg) {
             switch(pkalg){
-                case 256:
+                case 0x0100:
                     return "ALG_KEY_ECC_X962_RAW";
-                case 257:
+                case 0x0101:
                     return "ALG_KEY_ECC_X962_DER";
-                case 258:
+                case 0x0102:
                     return "ALG_KEY_RSA_2048_RAW";
-                case 259:
+                case 0x0103:
                     return "ALG_KEY_RSA_2048_DER";
-                case 260:
+                case 0x0104:
                     return "ALG_KEY_COSE";
                 default:
                     throw new Error("unknown public key algorithm and encoding: " + pkalg);
@@ -52760,12 +52761,12 @@ class MdsEntry {
         this.tcDisplay = this.tcDisplay instanceof Array ? this.tcDisplay : tcDisplayToArr(this.tcDisplay);
         function tcDisplayToArr(tcd) {
             const ret = [];
-            if (tcd & 1) ret.push("any");
-            if (tcd & 2) ret.push("priviledged-software");
-            if (tcd & 4) ret.push("tee");
-            if (tcd & 8) ret.push("hardware");
-            if (tcd & 16) ret.push("remote");
-            if (tcd & 65504) throw new Error("unknown transaction confirmation display flags: " + tcd & 65504);
+            if (tcd & 0x0001) ret.push("any");
+            if (tcd & 0x0002) ret.push("priviledged-software");
+            if (tcd & 0x0004) ret.push("tee");
+            if (tcd & 0x0008) ret.push("hardware");
+            if (tcd & 0x0010) ret.push("remote");
+            if (tcd & 0xFFE0) throw new Error("unknown transaction confirmation display flags: " + tcd & 0xFFE0);
             return ret;
         }
         this.userVerificationDetails = uvDetailsToSet(this.userVerificationDetails);
@@ -52805,17 +52806,17 @@ class MdsEntry {
         }
         function uvToArr(uv) {
             const ret = [];
-            if (uv & 1) ret.push("presence");
-            if (uv & 2) ret.push("fingerprint");
-            if (uv & 4) ret.push("passcode");
-            if (uv & 8) ret.push("voiceprint");
-            if (uv & 16) ret.push("faceprint");
-            if (uv & 32) ret.push("location");
-            if (uv & 64) ret.push("eyeprint");
-            if (uv & 128) ret.push("pattern");
-            if (uv & 256) ret.push("handprint");
-            if (uv & 512) ret.push("none");
-            if (uv & 1024) ret.push("all");
+            if (uv & 0x00000001) ret.push("presence");
+            if (uv & 0x00000002) ret.push("fingerprint");
+            if (uv & 0x00000004) ret.push("passcode");
+            if (uv & 0x00000008) ret.push("voiceprint");
+            if (uv & 0x00000010) ret.push("faceprint");
+            if (uv & 0x00000020) ret.push("location");
+            if (uv & 0x00000040) ret.push("eyeprint");
+            if (uv & 0x00000080) ret.push("pattern");
+            if (uv & 0x00000100) ret.push("handprint");
+            if (uv & 0x00000200) ret.push("none");
+            if (uv & 0x00000400) ret.push("all");
             return ret;
         }
         if (this.protocolFamily === undefined) this.protocolFamily = "uaf";
@@ -52847,9 +52848,9 @@ class MdsCollection {
             parsedJws.header = protectedHeader;
             parsedJws.key = publicKey;
             this.toc = parsedJws.payload;
-        } catch (e15) {
-            e15.message = "could not parse and validate MDS TOC: " + e15.message;
-            throw e15;
+        } catch (e22) {
+            e22.message = "could not parse and validate MDS TOC: " + e22.message;
+            throw e22;
         }
         if (rootCert === undefined) {
             if (parsedJws.kid === "Metadata TOC Signer 3" || parsedJws.key && parsedJws.key.kid === "Metadata TOC Signer 3") {
@@ -53102,8 +53103,8 @@ async function validateCerts(parsedAttCert, aaguid, _x5c, audit) {
     const attCert = new Certificate1(coerceToBase64(parsedAttCert, "parsedAttCert"));
     try {
         await attCert.verify();
-    } catch (e16) {
-        const err = e16;
+    } catch (e23) {
+        const err = e23;
         if (err.message === "Please provide issuer certificate as a parameter") {
             audit.warning.set("attesation-not-validated", "could not validate attestation because the root attestation certification could not be found");
         } else {
@@ -53245,11 +53246,11 @@ async function fidoU2fValidateFn() {
         throw new Error("U2F public key y component was wrong size");
     }
     const verificationData = new Uint8Array([
-        0,
+        0x00,
         ...new Uint8Array(rpIdHash),
         ...new Uint8Array(clientDataHash),
         ...new Uint8Array(credId),
-        4,
+        0x04,
         ...new Uint8Array(x),
         ...new Uint8Array(y), 
     ]);
@@ -53363,7 +53364,7 @@ function parseCertInfo(certInfo) {
     const ci = new Map();
     ci.set("rawCertInfo", certInfo);
     const magic = dv.getUint32(offset);
-    if (magic !== 4283712327) {
+    if (magic !== 0xff544347) {
         throw new Error("tpm attestation: certInfo had bad magic number: " + magic.toString(16));
     }
     ci.set("magic", magic);
@@ -53444,50 +53445,50 @@ function parsePubArea(pubArea) {
     }
     return pa;
 }
-function decodeStructureTag(t4) {
-    switch(t4){
-        case 196:
+function decodeStructureTag(t8) {
+    switch(t8){
+        case 0x00C4:
             return "TPM_ST_RSP_COMMAND";
-        case 32768:
+        case 0x8000:
             return "TPM_ST_NULL";
-        case 32769:
+        case 0x8001:
             return "TPM_ST_NO_SESSIONS";
-        case 32770:
+        case 0x8002:
             return "TPM_ST_SESSIONS";
-        case 32771:
+        case 0x8003:
             return "TPM_RESERVED_0x8003";
-        case 32772:
+        case 0x8004:
             return "TPM_RESERVED_0x8004";
-        case 32788:
+        case 0x8014:
             return "TPM_ST_ATTEST_NV";
-        case 32789:
+        case 0x8015:
             return "TPM_ST_ATTEST_COMMAND_AUDIT";
-        case 32790:
+        case 0x8016:
             return "TPM_ST_ATTEST_SESSION_AUDIT";
-        case 32791:
+        case 0x8017:
             return "TPM_ST_ATTEST_CERTIFY";
-        case 32792:
+        case 0x8018:
             return "TPM_ST_ATTEST_QUOTE";
-        case 32793:
+        case 0x8019:
             return "TPM_ST_ATTEST_TIME";
-        case 32794:
+        case 0x801A:
             return "TPM_ST_ATTEST_CREATION";
-        case 32795:
+        case 0x801B:
             return "TPM_RESERVED_0x801B";
-        case 32801:
+        case 0x8021:
             return "TPM_ST_CREATION";
-        case 32802:
+        case 0x8022:
             return "TPM_ST_VERIFIED";
-        case 32803:
+        case 0x8023:
             return "TPM_ST_AUTH_SECRET";
-        case 32804:
+        case 0x8024:
             return "TPM_ST_HASHCHECK";
-        case 32805:
+        case 0x8025:
             return "TPM_ST_AUTH_SIGNED";
-        case 32809:
+        case 0x8029:
             return "TPM_ST_FU_MANIFEST";
         default:
-            throw new Error("tpm attestation: unknown structure tag: " + t4.toString(16));
+            throw new Error("tpm attestation: unknown structure tag: " + t8.toString(16));
     }
 }
 function decodeObjectAttributes(oa) {
@@ -53612,7 +53613,7 @@ async function tpmValidateFn() {
         throw new Error("tpm attestation: RSA 'n' of WebAuthn credentialPublicKey and TPM publicArea did not match");
     }
     const magic = certInfo.get("magic");
-    if (magic !== 4283712327) {
+    if (magic !== 0xff544347) {
         throw new Error("tpm attestation: certInfo had bad magic number: " + magic.toString(16));
     }
     const type = certInfo.get("type");
@@ -53655,8 +53656,8 @@ async function tpmValidateFn() {
     const attCert = new Certificate1(coerceToBase64(parsedAttCert, "parsedAttCert"));
     try {
         await attCert.verify();
-    } catch (e17) {
-        const err = e17;
+    } catch (e24) {
+        const err = e24;
         if (err.message === "Please provide issuer certificate as a parameter") {
             this.audit.warning.set("attesation-not-validated", "could not validate attestation because the root attestation certification could not be found");
         } else {
@@ -54427,14 +54428,14 @@ async function parseAuthenticatorData(authnrDataArrayBuffer) {
     const flags = authnrDataBuf.getUint8(offset);
     const flagsSet = new Set();
     ret.set("flags", flagsSet);
-    if (flags & 1) flagsSet.add("UP");
-    if (flags & 2) flagsSet.add("RFU1");
-    if (flags & 4) flagsSet.add("UV");
-    if (flags & 8) flagsSet.add("RFU3");
-    if (flags & 16) flagsSet.add("RFU4");
-    if (flags & 32) flagsSet.add("RFU5");
-    if (flags & 64) flagsSet.add("AT");
-    if (flags & 128) flagsSet.add("ED");
+    if (flags & 0x01) flagsSet.add("UP");
+    if (flags & 0x02) flagsSet.add("RFU1");
+    if (flags & 0x04) flagsSet.add("UV");
+    if (flags & 0x08) flagsSet.add("RFU3");
+    if (flags & 0x10) flagsSet.add("RFU4");
+    if (flags & 0x20) flagsSet.add("RFU5");
+    if (flags & 0x40) flagsSet.add("AT");
+    if (flags & 0x80) flagsSet.add("ED");
     offset++;
     ret.set("counter", authnrDataBuf.getUint32(offset, false));
     offset += 4;
@@ -54954,7 +54955,7 @@ async function validateAudit() {
     this.audit.complete = true;
     return true;
 }
-function attach(o105) {
+function attach(o127) {
     let mixins = {
         validateExpectations,
         validateCreateRequest,
@@ -54989,7 +54990,7 @@ function attach(o105) {
         validateAudit
     };
     for (let key of Object.keys(mixins)){
-        o105[key] = mixins[key];
+        o127[key] = mixins[key];
     }
 }
 export { attach as attach };
